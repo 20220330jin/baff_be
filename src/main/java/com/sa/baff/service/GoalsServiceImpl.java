@@ -1,6 +1,7 @@
 package com.sa.baff.service;
 
 import com.sa.baff.domain.Goals;
+import com.sa.baff.model.dto.GoalsDto;
 import com.sa.baff.model.vo.GoalsVO;
 import com.sa.baff.repository.GoalsRepository;
 import com.sa.baff.util.DateTimeUtils;
@@ -9,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @Transactional
@@ -30,5 +33,12 @@ public class GoalsServiceImpl implements GoalsService {
                 .build();
 
         goalsRepository.save(goals);
+    }
+
+    @Override
+    public List<Goals> getGoalsList() {
+        List<Goals> goals = goalsRepository.findAll();
+
+        return goals;
     }
 }

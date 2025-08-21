@@ -1,12 +1,14 @@
 package com.sa.baff.model.vo;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 public class GoalsVO {
 
     @Getter
+    @Setter
     public static class recordGoals {
         /* 목표 제목 */
         String title;
