@@ -8,5 +8,5 @@ import org.springframework.stereotype.Repository;
  * 목표 설정 관련 레포지토리 모음
  */
 @Repository
-public interface GoalsRepository extends JpaRepository<Goals, Long> {
+public interface GoalsRepository extends JpaRepository<Goals, Long>, GoalsRepositoryCustom {
 }

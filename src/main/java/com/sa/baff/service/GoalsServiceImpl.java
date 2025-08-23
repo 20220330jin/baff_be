@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -36,9 +37,24 @@ public class GoalsServiceImpl implements GoalsService {
     }
 
     @Override
-    public List<Goals> getGoalsList() {
+    public List<GoalsDto.getGoalsList> getGoalsList() {
         List<Goals> goals = goalsRepository.findAll();
 
-        return goals;
+        List<GoalsDto.getGoalsList> goalsList = goals.stream()
+                .map(goal -> {
+                    GoalsDto.getGoalsList dto = new GoalsDto.getGoalsList();
+                    dto.setTitle(goal.getTitle());
+                    dto.setStartDate(goal.getStartDate());
+                    dto.setEndDate(goal.getEndDate());
+                    dto.setStartWeight(goal.getStartWeight());
+                    dto.setTargetWeight(goal.getTargetWeight());
+
+                    dto.setIsExpired(goal.getEndDate().isBefore(DateTimeUtils.now()));
+
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        return goalsList;
     }
 }

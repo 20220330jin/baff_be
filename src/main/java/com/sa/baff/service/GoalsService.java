@@ -19,5 +19,5 @@ public interface GoalsService {
     /**
      * 저장 목표 리스트 조회 서비스
      */
-    List<Goals> getGoalsList();
+    List<GoalsDto.getGoalsList> getGoalsList();
 }

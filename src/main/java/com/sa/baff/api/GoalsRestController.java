@@ -26,7 +26,7 @@ public class GoalsRestController {
     }
 
     @GetMapping("/getGoalsList")
-    public List<Goals> getGoalsList() {
+    public List<GoalsDto.getGoalsList> getGoalsList() {
         return goalsService.getGoalsList();
     }
 }
