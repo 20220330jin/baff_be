@@ -44,5 +44,6 @@ public class UserB extends BaseEntity {
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
         this.socialId = socialId;
+        this.role = Role.USER; // 기본 역할은 USER로 설정
     }
 }

@@ -43,6 +43,7 @@ public class GoalsServiceImpl implements GoalsService {
         List<GoalsDto.getGoalsList> goalsList = goals.stream()
                 .map(goal -> {
                     GoalsDto.getGoalsList dto = new GoalsDto.getGoalsList();
+                    dto.setGoalsId(goal.getId());
                     dto.setTitle(goal.getTitle());
                     dto.setStartDate(goal.getStartDate());
                     dto.setEndDate(goal.getEndDate());

@@ -13,6 +13,8 @@ public class GoalsDto {
     @Setter
     @Getter
     public static class getGoalsList {
+        /* 목표 ID */
+        private Long goalsId;
         /* 목표 제목 */
         private String title;
         /* 목표 기간(시작일) */
