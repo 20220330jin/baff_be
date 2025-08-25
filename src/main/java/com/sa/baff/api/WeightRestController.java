@@ -9,6 +9,5 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/weight")
-@CrossOrigin("*")
 public class WeightRestController {
 }
