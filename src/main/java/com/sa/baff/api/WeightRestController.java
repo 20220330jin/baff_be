@@ -27,4 +27,15 @@ public class WeightRestController {
     public WeightDto.getWeightList getWeightList(@AuthenticationPrincipal String socialId) {
         return weightService.getWeightList(socialId);
     }
+
+    /**
+     * 현재 체중 조회 API
+     * - 목표 설정 페이지에서 이용
+     */
+    @GetMapping("/getCurrentWeight")
+    public WeightDto.getCurrentWeight getCurrentWeight(@AuthenticationPrincipal String socialId) {
+        return weightService.getCurrentWeight(socialId);
+    }
+
+
 }

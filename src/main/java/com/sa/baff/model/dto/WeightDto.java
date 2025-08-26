@@ -31,4 +31,18 @@ public class WeightDto {
         private Double recordWeight;
         // 전일대비 변화량은 프론트에서 처리
     }
+
+    /**
+     * 현재 체중 조회 DTO
+     */
+    @Setter
+    @Getter
+    public static class getCurrentWeight {
+        /* 현재 체중 */
+        private Double currentWeight;
+
+        public getCurrentWeight(Double currentWeight) {
+            this.currentWeight = currentWeight;
+        }
+    }
 }

@@ -5,6 +5,7 @@ import com.sa.baff.model.dto.GoalsDto;
 import com.sa.baff.model.vo.GoalsVO;
 import com.sa.baff.service.GoalsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,12 +21,13 @@ public class GoalsRestController {
     private final GoalsService goalsService;
 
     @PostMapping("/recordGoals")
-    public void recordGoals(@RequestBody GoalsVO.recordGoals recordGoalsParam){
+    public void recordGoals(@RequestBody GoalsVO.recordGoals recordGoalsParam, @AuthenticationPrincipal String socialId){
+        recordGoalsParam.setSocialId(socialId);
         goalsService.recordGoals(recordGoalsParam);
     }
 
     @GetMapping("/getGoalsList")
-    public List<GoalsDto.getGoalsList> getGoalsList() {
-        return goalsService.getGoalsList();
+    public List<GoalsDto.getGoalsList> getGoalsList(@AuthenticationPrincipal String socialId) {
+        return goalsService.getGoalsList(socialId);
     }
 }

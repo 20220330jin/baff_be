@@ -33,11 +33,12 @@ public class Goals extends BaseEntity {
     private UserB user;
 
     @Builder
-    public Goals(String title, LocalDateTime startDate, LocalDateTime endDate, Integer startWeight, Integer targetWeight) {
+    public Goals(String title, LocalDateTime startDate, LocalDateTime endDate, Integer startWeight, Integer targetWeight, UserB user) {
         this.title = title;
         this.startDate = startDate;
         this.endDate = endDate;
         this.startWeight = startWeight;
         this.targetWeight = targetWeight;
+        this.user = user;
     }
 }

@@ -18,5 +18,7 @@ public class GoalsVO {
         Integer startWeight;
         /* 목표 체중 */
         Integer targetWeight;
+        /* 유저 Social ID */
+        String socialId;
     }
 }

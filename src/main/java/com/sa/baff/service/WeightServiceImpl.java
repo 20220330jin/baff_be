@@ -72,4 +72,13 @@ public class WeightServiceImpl implements WeightService {
 
         return data;
     }
+
+    @Override
+    public WeightDto.getCurrentWeight getCurrentWeight(String socialId) {
+        // 유저 정보 조회
+        UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        WeightDto.getCurrentWeight weightInfo = weightRepository.getCurrentWeight(user.getId());
+
+        return weightInfo;
+    }
 }

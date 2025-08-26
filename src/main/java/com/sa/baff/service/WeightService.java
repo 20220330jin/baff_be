@@ -14,4 +14,11 @@ public interface WeightService {
     void recordWeight(WeightVO.recordWeight recordWeightParam, String socialId);
 
     WeightDto.getWeightList getWeightList(String socialId);
+
+    /**
+     * 현재 체중 조회 Service
+     * @param socialId
+     * @return
+     */
+    WeightDto.getCurrentWeight getCurrentWeight(String socialId);
 }
