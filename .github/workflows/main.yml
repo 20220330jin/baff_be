@@ -18,6 +18,9 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: List files
+        run: ls -al baff_be/src/main/resources
+
       - name: Create application-local.yml
         run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > baff_be/src/main/resources/application-local.yml
 
