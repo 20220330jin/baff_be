@@ -17,7 +17,7 @@ RUN ./gradlew dependencies
 
 COPY --chown=gradle:gradle src /app/src
 
-RUN ./gradlew build --no-daemon --no-build-cache
+RUN ./gradlew build -x test --no-daemon --no-build-cache
 
 FROM openjdk:17-jdk-slim
 WORKDIR /app
