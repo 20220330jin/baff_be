@@ -94,6 +94,7 @@ public class WebSecurityConfig {
           corsConfiguration.addAllowedMethod("*");
           corsConfiguration.setAllowCredentials(true);
           corsConfiguration.addAllowedOrigin("http://localhost:5173");
+          corsConfiguration.addAllowedOrigin("https://baff-fe.vercel.app");
 
           UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
           source.registerCorsConfiguration("/**", corsConfiguration);
