@@ -19,7 +19,7 @@ jobs:
           java-version: 17
 
       - name: Create application-local.yml
-        run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > onlymebe/src/main/resources/application-local.yml
+        run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > baff_be/src/main/resources/application-local.yml
 
       - name: Build Docker image
         run: docker build -t baff_be .
