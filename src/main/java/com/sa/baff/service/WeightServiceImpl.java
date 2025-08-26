@@ -11,8 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,49 +29,69 @@ public class WeightServiceImpl implements WeightService {
     @Override
     public void recordWeight(WeightVO.recordWeight recordWeightParam, String socialId) {
         UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        Weight weight = Weight.builder()
-                .user(user)
-                .weight(recordWeightParam.getWeight())
-                .recordDate(recordWeightParam.getRecordDate())
-                .build();
+        // 요청 날짜를 기준으로 당일의 시작 시간과 종료 시간을 계산
+        LocalDate requestDate = recordWeightParam.getRecordDate().toLocalDate();
+        LocalDateTime startOfDay = requestDate.atStartOfDay();
+        LocalDateTime endOfDay = requestDate.plusDays(1).atStartOfDay().minusNanos(1);
 
-        weightRepository.save(weight);
+        // 해당 날짜 범위에 이미 기록이 있는지 확인
+        Optional<Weight> existingWeight = weightRepository.findByUserAndRecordDateBetween(user, startOfDay, endOfDay);
+
+        if (existingWeight.isPresent()) {
+            Weight weightToUpdate = existingWeight.get();
+            weightToUpdate.setWeight(recordWeightParam.getWeight());
+            weightToUpdate.setRecordDate(recordWeightParam.getRecordDate());
+            weightRepository.save(weightToUpdate);
+        } else {
+            // 기존 기록이 없다면, 새로운 엔티티를 생성합니다.
+            Weight newWeight = Weight.builder()
+                    .user(user)
+                    .weight(recordWeightParam.getWeight())
+                    .recordDate(recordWeightParam.getRecordDate())
+                    .build();
+            weightRepository.save(newWeight);
+        }
     }
 
     @Override
     public WeightDto.getWeightList getWeightList(String socialId) {
-        // 가장 최신의 체중
-        // 총 변화량
-        // 기록된 일수
         UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         List<Weight> weightList = weightRepository.findByUserId(user.getId());
 
         // 리턴할 데이터를 담을 그릇
         WeightDto.getWeightList data = new WeightDto.getWeightList();
-        // weightDto 에 정의해둔 WeightResponse - recordDate, recordWeight
-        List<WeightDto.WeightResponseDto> responseDto = weightList.stream().map(weightData -> {
-            WeightDto.WeightResponseDto resDto = new WeightDto.WeightResponseDto();
-            resDto.setRecordWeight(weightData.getWeight());
-            resDto.setRecordDate(weightData.getRecordDate());
-            return resDto;
-        }).collect(Collectors.toList());
-        data.setDailyWeightRecords(responseDto);
 
-        double lastRecord = weightList.stream()
-                .sorted(Comparator.comparing(Weight::getRecordDate).reversed())
-                .collect(Collectors.toList()).get(0).getWeight();
+        if (weightList.isEmpty()) {
+            data.setDailyWeightRecords(List.of()); // 빈 리스트 설정
+            data.setCurrentWeight(0.0);
+            data.setTotalWeightChange(0.0);
+            data.setRecordedDays(0);
+            return data;
+        }
+
+        // 2. recordDate 기준으로 정렬된 리스트를 한 번만 만듭니다.
+        List<Weight> sortedWeightList = weightList.stream()
+                .sorted(Comparator.comparing(Weight::getRecordDate))
+                .collect(Collectors.toList());
+
+        double lastRecord = sortedWeightList.get(sortedWeightList.size() - 1).getWeight();
         data.setCurrentWeight(lastRecord);
 
-        double firstRecord = weightList.stream()
-                .sorted(Comparator.comparing(Weight::getRecordDate).reversed())
-                .collect(Collectors.toList()).get(weightList.size() - 1).getWeight();
-        data.setCurrentWeight(lastRecord);
+        double firstRecord = sortedWeightList.get(0).getWeight();
 
         double totalChange = lastRecord - firstRecord;
         data.setTotalWeightChange(totalChange);
 
         Integer recordDays = weightList.size();
         data.setRecordedDays(recordDays);
+
+        List<WeightDto.WeightResponseDto> responseDto = sortedWeightList.stream().map(weightData -> {
+            WeightDto.WeightResponseDto resDto = new WeightDto.WeightResponseDto();
+            resDto.setRecordWeight(weightData.getWeight());
+            resDto.setRecordDate(weightData.getRecordDate());
+            return resDto;
+        }).collect(Collectors.toList());
+        data.setDailyWeightRecords(responseDto);
 
         return data;
     }
