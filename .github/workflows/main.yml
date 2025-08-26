@@ -25,4 +25,4 @@ jobs:
         run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > src/main/resources/application-local.yml
 
       - name: Build Docker image
-        run: docker build -t baff_be .
+        run: docker build -t baff_be -f ./baff_be/Dockerfile ./baff_be
