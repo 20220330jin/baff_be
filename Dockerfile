@@ -5,8 +5,6 @@ WORKDIR /app
 
 COPY --chown=gradle:gradle build.gradle settings.gradle gradlew /app/
 COPY --chown=gradle:gradle gradle /app/gradle
-# debug
-RUN ls -lR /app/src/main/resources
 
 # .gradle 디렉터리 생성 및 소유권 변경
 RUN mkdir -p /app/.gradle && chown -R gradle:gradle /app /home/gradle
@@ -18,6 +16,9 @@ USER gradle
 RUN ./gradlew dependencies
 
 COPY --chown=gradle:gradle src /app/src
+
+# debug
+RUN ls -lR /app/src/main/resources
 
 RUN ./gradlew build -x test --no-daemon --no-build-cache
 
