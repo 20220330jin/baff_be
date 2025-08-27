@@ -29,15 +29,15 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String token = jwtProvider.create(userId);
 
         // --- 현재 활성화된 코드: 배포 환경용 ---
-        createAndSetCookieForProduction(response, "accessToken", token);
-        String redirectUrl = "https://baff-fe.vercel.app/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
-        response.sendRedirect(redirectUrl);
+//        createAndSetCookieForProduction(response, "accessToken", token);
+//        String redirectUrl = "https://baff-fe.vercel.app/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
+//        response.sendRedirect(redirectUrl);
 
 
         // --- 로컬 환경에서 사용시 아래 코드로 교체 ---
-//        createAndSetCookieForLocal(response, "accessToken", token);
-//        String localRedirectUrl = "http://localhost:5173/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
-//        response.sendRedirect(localRedirectUrl);
+        createAndSetCookieForLocal(response, "accessToken", token);
+        String localRedirectUrl = "http://localhost:5173/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
+        response.sendRedirect(localRedirectUrl);
 
     }
 

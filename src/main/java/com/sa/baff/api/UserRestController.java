@@ -1,5 +1,6 @@
 package com.sa.baff.api;
 
+import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -8,6 +9,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  *
@@ -41,5 +44,13 @@ public class UserRestController {
         UserDto userInfo = userService.getUserInfo(userId);
         System.out.println("USERINFO=======" + userInfo);
         return ResponseEntity.ok(userInfo);
+    }
+
+    /**
+     * 어드민 대시보드 유저리스트 조회 api
+     */
+    @GetMapping("/getUserList")
+    public List<UserBDto.getUserList> getUserList() {
+        return userService.getUserList();
     }
 }
