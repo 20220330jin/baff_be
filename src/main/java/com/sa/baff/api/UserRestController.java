@@ -21,6 +21,11 @@ public class UserRestController {
 
     private final UserService userService;
 
+    @GetMapping("/cron")
+    public void cron() {
+        
+    }
+
     /**
      * 현재 로그인된 사용자의 정보를 조회하는 API입니다.
      * 프론트엔드에서는 이 API를 호출하여 사용자의 로그인 상태를 확인합니다.
