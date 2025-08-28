@@ -13,4 +13,10 @@ public interface GoalsRepositoryCustom {
      * @return
      */
     List<GoalsDto.getGoalsList> getGoalsList();
+
+    /**
+     * 목표 삭제
+     * @param goalId
+     */
+    void deleteGoals(Long goalId);
 }

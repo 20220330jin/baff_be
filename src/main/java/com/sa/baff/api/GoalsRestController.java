@@ -30,4 +30,13 @@ public class GoalsRestController {
     public List<GoalsDto.getGoalsList> getGoalsList(@AuthenticationPrincipal String socialId) {
         return goalsService.getGoalsList(socialId);
     }
+
+    /**
+     * 목표 삭제 api
+     * @param goalId
+     */
+    @PostMapping("/deleteGoal/{goalId}")
+    public void deleteGoal(@PathVariable Long goalId) {
+        goalsService.deleteGoal(goalId);
+    }
 }

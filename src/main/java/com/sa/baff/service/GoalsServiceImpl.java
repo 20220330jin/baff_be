@@ -49,7 +49,7 @@ public class GoalsServiceImpl implements GoalsService {
         // 사용자 확인
         UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        List<Goals> goals = goalsRepository.findByUserId(user.getId()).orElse(null);
+        List<Goals> goals = goalsRepository.findByUserIdAndDelYn(user.getId(), 'N').orElse(null);
 
         List<GoalsDto.getGoalsList> goalsList = goals.stream()
                 .map(goal -> {
@@ -68,5 +68,10 @@ public class GoalsServiceImpl implements GoalsService {
                 .collect(Collectors.toList());
 
         return goalsList;
+    }
+
+    @Override
+    public void deleteGoal(Long goalId) {
+        goalsRepository.deleteGoals(goalId);
     }
 }

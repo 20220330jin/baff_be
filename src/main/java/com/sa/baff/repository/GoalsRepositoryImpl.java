@@ -2,7 +2,9 @@ package com.sa.baff.repository;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sa.baff.domain.Goals;
+import com.sa.baff.domain.QGoals;
 import com.sa.baff.model.dto.GoalsDto;
+import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.stereotype.Repository;
@@ -23,5 +25,16 @@ public class GoalsRepositoryImpl extends QuerydslRepositorySupport implements Go
     @Override
     public List<GoalsDto.getGoalsList> getGoalsList() {
         return List.of();
+    }
+
+    @Override
+    public void deleteGoals(Long goalId) {
+        QGoals goals = QGoals.goals;
+
+        jpaQueryFactory.update(goals)
+                .set(goals.delYn, 'Y')
+                .set(goals.modDateTime, DateTimeUtils.now())
+                .where(goals.id.eq(goalId))
+                .execute();
     }
 }
