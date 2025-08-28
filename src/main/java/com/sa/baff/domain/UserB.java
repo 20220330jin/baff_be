@@ -34,6 +34,8 @@ public class UserB extends BaseEntity {
     @Column(nullable = false)
     private Role role; // 사용자 역할 (USER, ADMIN 등)
 
+    private String provider;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Goals> goals = new ArrayList<>();
 
@@ -48,5 +50,6 @@ public class UserB extends BaseEntity {
         this.profileImageUrl = profileImageUrl;
         this.socialId = socialId;
         this.role = Role.USER; // 기본 역할은 USER로 설정
+        this.provider = platform;
     }
 }

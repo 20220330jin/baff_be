@@ -31,4 +31,33 @@ public class UserBDto {
         /* 유저 상태 */
         private String status;
     }
+
+    /**
+     * 유저 정보 DTO
+     */
+    @Getter
+    public static class getUserInfo {
+        /* 유저ID */
+        private Long userId;
+        /* 유저 닉네임 */
+        private String nickname;
+        /* 유저 이메일 */
+        private String email;
+        /* 유저 이미지 url */
+        private String userProfileUrl;
+        /* 유저 등록 시간 */
+        private LocalDateTime regDateTime;
+        /* 가입 */
+        private String provider;
+
+        public getUserInfo(Long userId, String nickname, String email, String userProfileUrl, LocalDateTime regDateTime, String provider) {
+            this.userId = userId;
+            this.nickname = nickname;
+            this.email = email;
+            this.userProfileUrl = userProfileUrl;
+            this.regDateTime = regDateTime;
+            this.provider = provider;
+
+        }
+    }
 }

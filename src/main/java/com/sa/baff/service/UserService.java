@@ -17,4 +17,11 @@ public interface UserService {
      * @return
      */
     List<UserBDto.getUserList> getUserList();
+
+    /**
+     * 유저 정보 조회 서비스
+     * @param userId
+     * @return
+     */
+    UserBDto.getUserInfo getUserInfoForProfile(Long userId);
 }

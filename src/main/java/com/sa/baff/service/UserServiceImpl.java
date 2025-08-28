@@ -46,4 +46,9 @@ public class UserServiceImpl implements UserService {
 
         return userDtoList;
     }
+
+    @Override
+    public UserBDto.getUserInfo getUserInfoForProfile(Long userId) {
+        return userRepository.getUserInfoForProfile(userId);
+    }
 }
