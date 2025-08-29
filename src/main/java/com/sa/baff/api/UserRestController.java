@@ -3,13 +3,11 @@ package com.sa.baff.api;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.service.UserService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -64,4 +62,9 @@ public class UserRestController {
     public UserBDto.getUserInfo getUserInfo(@PathVariable Long userId) {
         return userService.getUserInfoForProfile(userId);
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> userLogout(HttpServletResponse response) {
+            return this.userService.userLogout(response);
+        }
 }

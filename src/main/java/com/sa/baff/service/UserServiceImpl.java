@@ -4,8 +4,10 @@ import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.repository.UserRepository;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -31,7 +33,7 @@ public class UserServiceImpl implements UserService {
         Iterable<UserB> user = userRepository.findAll();
         List<UserBDto.getUserList> userDtoList = new ArrayList<>();
 
-        for(UserB userB : user){
+        for (UserB userB : user) {
             UserBDto.getUserList userDto = new UserBDto.getUserList();
             userDto.setUserId(userB.getId());
             userDto.setNickname(userB.getNickname());
@@ -50,5 +52,12 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserBDto.getUserInfo getUserInfoForProfile(Long userId) {
         return userRepository.getUserInfoForProfile(userId);
+    }
+
+    @Override
+    public ResponseEntity<?> userLogout(HttpServletResponse response) {
+        String cookieHeader = String.format("accessToken=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=None; Domain=%s", "baff-be.onrender.com");
+        response.setHeader("Set-Cookie", cookieHeader);
+        return ResponseEntity.ok("Logged out successfully");
     }
 }

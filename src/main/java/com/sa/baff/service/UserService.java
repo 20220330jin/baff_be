@@ -2,6 +2,8 @@ package com.sa.baff.service;
 
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -24,4 +26,6 @@ public interface UserService {
      * @return
      */
     UserBDto.getUserInfo getUserInfoForProfile(Long userId);
+
+    ResponseEntity<?> userLogout(HttpServletResponse response);
 }
