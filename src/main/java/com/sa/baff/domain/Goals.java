@@ -25,15 +25,15 @@ public class Goals extends BaseEntity {
     private String title;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
-    private Integer startWeight;
-    private Integer targetWeight;
+    private Double startWeight;
+    private Double targetWeight;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userId")
     private UserB user;
 
     @Builder
-    public Goals(String title, LocalDateTime startDate, LocalDateTime endDate, Integer startWeight, Integer targetWeight, UserB user) {
+    public Goals(String title, LocalDateTime startDate, LocalDateTime endDate, Double startWeight, Double targetWeight, UserB user) {
         this.title = title;
         this.startDate = startDate;
         this.endDate = endDate;

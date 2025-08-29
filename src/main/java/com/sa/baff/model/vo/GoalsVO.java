@@ -15,9 +15,9 @@ public class GoalsVO {
         /* 목표 기간(시간) */
         Integer presetDuration;
         /* 시작 체중 */
-        Integer startWeight;
+        Double startWeight;
         /* 목표 체중 */
-        Integer targetWeight;
+        Double targetWeight;
         /* 유저 Social ID */
         String socialId;
     }
