@@ -60,4 +60,16 @@ public class UserServiceImpl implements UserService {
         response.setHeader("Set-Cookie", cookieHeader);
         return ResponseEntity.ok("Logged out successfully");
     }
+
+    @Override
+    public void insertHeight(String socialId, Double height) {
+        // socialId를 사용하여 데이터베이스에서 유저를 찾음
+        UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // 찾은 유저의 height 필드를 업데이트
+        user.setHeight(height);
+
+        // 변경된 내용을 저장
+        userRepository.save(user);
+    }
 }

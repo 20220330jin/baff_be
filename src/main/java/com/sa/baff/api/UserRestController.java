@@ -67,4 +67,9 @@ public class UserRestController {
     public ResponseEntity<?> userLogout(HttpServletResponse response) {
             return this.userService.userLogout(response);
         }
+
+    @PostMapping("/insertHeight")
+    public void insertHeight(@AuthenticationPrincipal String socialId, @RequestBody Double height) {
+        userService.insertHeight(socialId, height);
+    }
 }

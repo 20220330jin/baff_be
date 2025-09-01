@@ -15,6 +15,7 @@ public class UserDto {
     private String nickname;
     private String profileImage;
     private Role role;
+    private Double height;
 
     public static UserDto from(UserB user) {
         return new UserDto(
@@ -22,7 +23,8 @@ public class UserDto {
             user.getEmail(),
             user.getNickname(),
             user.getProfileImageUrl(),
-            user.getRole()
+            user.getRole(),
+            user.getHeight()
         );
     }
 }

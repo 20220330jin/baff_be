@@ -28,4 +28,6 @@ public interface UserService {
     UserBDto.getUserInfo getUserInfoForProfile(Long userId);
 
     ResponseEntity<?> userLogout(HttpServletResponse response);
+
+    void insertHeight(String socialId, Double height);
 }

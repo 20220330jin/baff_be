@@ -48,7 +48,7 @@ public class OAuth2UserServiceImpl extends DefaultOAuth2UserService {
             userProfileUrl = properties != null ? (String) properties.get("profile_image") : null;
             
             if (!userRepository.existsBySocialId(userId)) {
-                userEntity = new UserB(userEmail, userNickname, userProfileUrl, userId, "kakao");
+                userEntity = new UserB(userEmail, userNickname, userProfileUrl, userId, "kakao", null);
                 userRepository.save(userEntity);
             }
         } else if(oauthClientName.equals("Google")){
@@ -60,7 +60,7 @@ public class OAuth2UserServiceImpl extends DefaultOAuth2UserService {
             userProfileUrl = googleInfo.get("picture").toString();
 
             if (!userRepository.existsBySocialId(userId)) {
-                userEntity = new UserB(userEmail, userName, userProfileUrl, userId, "google");
+                userEntity = new UserB(userEmail, userName, userProfileUrl, userId, "google", null);
                 userRepository.save(userEntity);
             }
         }
