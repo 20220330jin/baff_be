@@ -17,4 +17,8 @@ public interface WeightRepository extends JpaRepository<Weight, Long>, WeightRep
 
     // 사용자 및 특정 날짜 범위(시작 시간 ~ 종료 시간)로 체중 기록을 조회
     Optional<Weight> findByUserAndRecordDateBetween(UserB user, LocalDateTime startOfDay, LocalDateTime endOfDay);
+
+    Optional<Weight> findTopByUserOrderByRecordDateDesc(UserB user);
+
+    Optional<Weight> findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(UserB user, LocalDateTime attr0);
 }

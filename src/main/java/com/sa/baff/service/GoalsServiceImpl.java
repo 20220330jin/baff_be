@@ -2,10 +2,12 @@ package com.sa.baff.service;
 
 import com.sa.baff.domain.Goals;
 import com.sa.baff.domain.UserB;
+import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.GoalsDto;
 import com.sa.baff.model.vo.GoalsVO;
 import com.sa.baff.repository.GoalsRepository;
 import com.sa.baff.repository.UserRepository;
+import com.sa.baff.repository.WeightRepository;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -14,7 +16,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +28,7 @@ public class GoalsServiceImpl implements GoalsService {
 
     private final GoalsRepository goalsRepository;
     private final UserRepository userRepository;
+    private final WeightRepository weightRepository;
 
     @Override
     public void recordGoals(GoalsVO.recordGoals recordGoalsParam) {
@@ -49,7 +54,11 @@ public class GoalsServiceImpl implements GoalsService {
         // 사용자 확인
         UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        List<Goals> goals = goalsRepository.findByUserIdAndDelYn(user.getId(), 'N').orElse(null);
+        // 최종 체중 계산을 위한 현재 체중 조회
+        Optional<Weight> latestWeightOpt = weightRepository.findTopByUserOrderByRecordDateDesc(user);
+        Double latestLiveWeight = latestWeightOpt.map(Weight::getWeight).orElse(null);
+
+        List<Goals> goals = goalsRepository.findByUserIdAndDelYn(user.getId(), 'N').orElse(Collections.emptyList());
 
         List<GoalsDto.getGoalsList> goalsList = goals.stream()
                 .map(goal -> {
@@ -61,7 +70,15 @@ public class GoalsServiceImpl implements GoalsService {
                     dto.setStartWeight(goal.getStartWeight());
                     dto.setTargetWeight(goal.getTargetWeight());
 
-                    dto.setIsExpired(goal.getEndDate().isBefore(DateTimeUtils.now()));
+                    boolean isExpired = goal.getEndDate().isBefore(DateTimeUtils.now());
+                    dto.setIsExpired(isExpired);
+                    if(isExpired) {
+                        weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, goal.getEndDate())
+                                .ifPresentOrElse(weightEnd -> dto.setCurrentWeight(weightEnd.getWeight()),
+                                        () -> dto.setCurrentWeight(goal.getStartWeight()));
+                    } else {
+                        dto.setCurrentWeight(latestLiveWeight);
+                    }
 
                     return dto;
                 })

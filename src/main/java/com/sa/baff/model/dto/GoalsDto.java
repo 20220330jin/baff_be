@@ -27,6 +27,10 @@ public class GoalsDto {
         private Double targetWeight;
         /* 목표기간 만료여부 */
         private Boolean isExpired;
+//        /* 만료시 최종 체중 */
+//        private Double finalWeight;
+        /**/
+        private Double currentWeight;
 
     }
 }
