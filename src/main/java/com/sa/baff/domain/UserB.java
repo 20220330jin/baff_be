@@ -37,7 +37,7 @@ public class UserB extends BaseEntity {
     private Role role; // 사용자 역할 (USER, ADMIN 등)
 
     @Column(nullable = true)
-    private Double height;
+    private Double height = 0.0;
 
     private String provider;
 
