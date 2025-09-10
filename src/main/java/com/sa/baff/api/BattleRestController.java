@@ -30,4 +30,29 @@ public class BattleRestController {
     public List<BattleRoomDto.getBattleRoomList> getBattleRoomList(@AuthenticationPrincipal String socialId) {
         return battleService.getBattleRoomList(socialId);
     }
+
+    @PostMapping("/{entryCode}/join")
+    public void joinBattleRoom(@PathVariable String entryCode, @RequestBody BattleRoomVO.joinRequest joinRequest, @AuthenticationPrincipal String socialId) {
+        battleService.joinBattleRoom(entryCode, joinRequest.getPassword(), socialId);
+    }
+
+    @GetMapping("/{entryCode}/details")
+    public BattleRoomDto.getBattleRoomDetails.battleRoomDetail getBattleRoomDetails(@PathVariable String entryCode) {
+        return battleService.getBattleRoomDetails(entryCode);
+    }
+
+    @PostMapping("/{entryCode}/battleGoalSetting")
+    public void battleGoalSetting(@PathVariable String entryCode, @RequestBody BattleRoomVO.battleGoalSetting battleGoalSetting, @AuthenticationPrincipal String socialId) {
+        battleService.battleGoalSetting(entryCode, battleGoalSetting, socialId);
+    }
+
+    @PostMapping("/{entryCode}/battleStart")
+    public void battleStart(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
+        battleService.battleStart(entryCode, socialId);
+    }
+
+    @GetMapping("/active")
+    public BattleRoomDto.ActiveBattleData activeBattles (@AuthenticationPrincipal String socialId) {
+        return battleService.activeBattles(socialId);
+    }
 }

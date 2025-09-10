@@ -8,5 +8,8 @@ public enum GoalType {
     WEIGHT_GAIN,
 
     // 체중 유지
-    MAINTAIN
+    MAINTAIN,
+
+    // 백분율 계산
+    PERCENTAGE_LOSS
 }
