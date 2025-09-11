@@ -13,7 +13,9 @@ import java.util.List;
 
 @Entity
 @Table(name = "battle_rooms")
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class BattleRoom extends BaseEntity{
 
     @Id

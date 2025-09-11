@@ -103,4 +103,10 @@ public class BattleRoomDto {
         private Integer daysRemaining;
         private String winner;
     }
+
+//    @Getter
+//    @Setter
+//    public static getTotalBattleList {
+//
+//    }
 }

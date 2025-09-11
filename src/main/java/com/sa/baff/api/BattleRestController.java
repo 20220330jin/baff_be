@@ -55,4 +55,13 @@ public class BattleRestController {
     public BattleRoomDto.ActiveBattleData activeBattles (@AuthenticationPrincipal String socialId) {
         return battleService.activeBattles(socialId);
     }
+    @GetMapping("/getEndedBattles")
+    public BattleRoomDto.ActiveBattleData getEndedBattles(@AuthenticationPrincipal String socialId) {
+        return battleService.getEndedBattles(socialId);
+    }
+
+    @PostMapping("/{entryCode}/deleteRoom")
+    public void deleteRoom(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
+        battleService.deleteRoom(entryCode, socialId);
+    }
 }

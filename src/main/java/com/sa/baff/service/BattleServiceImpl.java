@@ -64,6 +64,11 @@ public class BattleServiceImpl implements BattleService {
     @Override
     public List<BattleRoomDto.getBattleRoomList> getBattleRoomList(String socialId) {
         UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        /**
+         * 배틀 목록을 조회하기 전, 만료된 배틀의 상태를 업데이트
+         */
+        checkAndEndBattles(user);
+
 
         List<BattleParticipant> participants = battleParticipantRepository.findAllByUser(user);
 
@@ -239,6 +244,11 @@ public class BattleServiceImpl implements BattleService {
         UserB user = userRepository.findUserIdBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
+        /**
+         * 배틀 목록을 조회하기 전, 만료된 배틀의 상태를 업데이트
+         */
+        checkAndEndBattles(user);
+
         /** 사용자가 참여중인 배틀 방의 모든 배틀 참가자 목록 */
         List<BattleParticipant> participants = battleParticipantRepository.findAllByUser(user);
 
@@ -251,12 +261,12 @@ public class BattleServiceImpl implements BattleService {
                     BattleParticipant opponentParticipant = battleParticipantRepository.findByRoomAndUserNot(battleRoom, user)
                             .orElseThrow(() -> new IllegalArgumentException("상대방이 없습니다."));
 
-                    // 현재 사용자와 상대방의 최신 체중을 조회
-                    Double myCurrentWeight = weightRepository.findFirstByUserOrderByRecordDateDesc(user)
+                    // 현재 사용자와 상대방의 최신 체중을 조회 (LocalDate를 LocalDateTime으로 변환하기 위해 atStartOfDay 사용)
+                    Double myCurrentWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, battleRoom.getEndDate().atStartOfDay())
                             .map(Weight::getWeight)
                             .orElse(participant.getStartingWeight());
 
-                    Double opponentCurrentWeight = weightRepository.findFirstByUserOrderByRecordDateDesc(opponentParticipant.getUser())
+                    Double opponentCurrentWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(opponentParticipant.getUser(), battleRoom.getEndDate().atStartOfDay())
                             .map(Weight::getWeight)
                             .orElse(opponentParticipant.getStartingWeight());
 
@@ -311,6 +321,114 @@ public class BattleServiceImpl implements BattleService {
         return BattleRoomDto.ActiveBattleData.builder()
                 .activeBattles(battleSummaryData)
                 .build();
+    }
+
+    public BattleRoomDto.ActiveBattleData getEndedBattles(String socialId) {
+        UserB user1 = userRepository.findUserIdBySocialId(socialId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        /**
+         * 배틀 목록을 조회하기 전, 만료된 배틀의 상태를 업데이트
+         */
+        checkAndEndBattles(user1);
+
+        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUser(user1);
+
+        List<BattleRoomDto.BattleSummaryData> battleSummaryData = myParticipants.stream()
+                .filter(p -> p.getRoom().getStatus() == BattleStatus.ENDED)
+                .map(participant -> {
+                    BattleRoom battleRoom = participant.getRoom();
+                    UserB user = participant.getUser();
+
+                    // 2. 상대방 정보 조회
+                    BattleParticipant opponentParticipant = battleParticipantRepository.findByRoomAndUserNot(battleRoom, user)
+                            .orElseThrow(() -> new IllegalArgumentException("상대방이 없습니다."));
+
+                    // 3. 최종 체중 정보 조회
+                    // 배틀의 종료일(endDate)을 기준으로 최종 체중 기록을 가져옵니다.
+                    Double myFinalWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, battleRoom.getEndDate().atStartOfDay())
+                            .map(Weight::getWeight)
+                            .orElse(participant.getStartingWeight());
+
+                    Double opponentFinalWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(opponentParticipant.getUser(), battleRoom.getEndDate().atStartOfDay())
+                            .map(Weight::getWeight)
+                            .orElse(opponentParticipant.getStartingWeight());
+
+                    // 목표 감량량을 계산합니다.
+                    Double myTargetWeightLoss = calculateTargetWeightLoss(participant);
+                    Double opponentTargetWeightLoss = calculateTargetWeightLoss(opponentParticipant);
+
+                    // 최종 감량량 및 달성률 계산
+                    Double myWeightLoss = myFinalWeight != null ? participant.getStartingWeight() - myFinalWeight : 0.0;
+                    Double opponentWeightLoss = opponentFinalWeight != null ? opponentParticipant.getStartingWeight() - opponentFinalWeight : 0.0;
+
+                    Double myProgress = (myTargetWeightLoss != null && myTargetWeightLoss > 0) ? (myWeightLoss / myTargetWeightLoss) * 100 : 0.0;
+                    Double opponentProgress = (opponentTargetWeightLoss != null && opponentTargetWeightLoss > 0) ? (opponentWeightLoss / opponentTargetWeightLoss) * 100 : 0.0;
+
+                    // 기간을 계산합니다.
+                    long totalDays = ChronoUnit.DAYS.between(battleRoom.getStartDate(), battleRoom.getEndDate());
+
+                    // 승자를 결정 (진행률 기준으로)
+                    String winner = "tie";
+                    if (myProgress > opponentProgress) {
+                        winner = "me";
+                    } else if (opponentProgress > myProgress) {
+                        winner = "opponent";
+                    }
+
+                    return BattleRoomDto.BattleSummaryData.builder()
+                            .entryCode(battleRoom.getEntryCode())
+                            .opponentNickname(opponentParticipant.getUser().getNickname())
+                            .opponentUserId(opponentParticipant.getUser().getId())
+                            .myStartWeight(participant.getStartingWeight())
+                            .opponentStartWeight(opponentParticipant.getStartingWeight())
+                            // 종료된 배틀이므로 최종 체중을 현재 체중 필드에 매핑합니다.
+                            .myCurrentWeight(myFinalWeight)
+                            .opponentCurrentWeight(opponentFinalWeight)
+                            .myTargetWeightLoss(myTargetWeightLoss)
+                            .opponentTargetWeightLoss(opponentTargetWeightLoss)
+                            .startDate(battleRoom.getStartDate())
+                            .endDate(battleRoom.getEndDate())
+                            .status(battleRoom.getStatus().toString())
+                            .myWeightLoss(myWeightLoss)
+                            .opponentWeightLoss(opponentWeightLoss)
+                            .myProgress(myProgress)
+                            .opponentProgress(opponentProgress)
+                            .totalDays((int) totalDays)
+                            .daysRemaining(0) // 종료된 배틀이므로 남은 기간은 0
+                            .winner(winner)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return BattleRoomDto.ActiveBattleData.builder()
+                .activeBattles(battleSummaryData)
+                .build();
+    }
+
+    @Override
+    public void deleteRoom(String entryCode, String socialId) {
+        UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        battleRoomRepository.deleteRoom(user.getId(), entryCode);
+
+    }
+
+    /**
+     * 만료된 배틀의 상태를 업데이트하는 내부 로직
+     */
+    @Transactional
+    private void checkAndEndBattles(UserB user) {
+        LocalDate now = LocalDate.now();
+        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUser(user);
+
+        myParticipants.forEach(participant -> {
+            BattleRoom room = participant.getRoom();
+            if (room.getStatus() == BattleStatus.IN_PROGRESS && now.isAfter(room.getEndDate())) {
+                room.setStatus(BattleStatus.ENDED);
+                battleRoomRepository.save(room);
+            }
+        });
     }
 
     private Double calculateTargetWeightLoss(BattleParticipant participant) {

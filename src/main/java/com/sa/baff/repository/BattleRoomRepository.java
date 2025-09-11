@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface BattleRoomRepository extends JpaRepository<BattleRoom, Long> {
+public interface BattleRoomRepository extends JpaRepository<BattleRoom, Long>, BattleRoomRepositoryCustom {
     Optional<BattleRoom> findByEntryCode(String entryCode);
 }

@@ -19,4 +19,8 @@ public interface BattleService {
     void battleStart(String entryCode, String socialId);
 
     BattleRoomDto.ActiveBattleData activeBattles(String socialId);
+
+    BattleRoomDto.ActiveBattleData getEndedBattles(String socialId);
+
+    void deleteRoom(String entryCode, String socialId);
 }
