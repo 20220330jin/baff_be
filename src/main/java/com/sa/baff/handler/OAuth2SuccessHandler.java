@@ -47,7 +47,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     private void createAndSetCookieForProduction(HttpServletResponse response, String key, String value) {
         System.out.println("DEBUG: createAndSetCookieForProduction called for key: " + key); // 이 줄을 추가합니다.
         String cookieValue = String.format(
-                "%s=%s; Path=/; Max-Age=%d; SameSite=None; Secure; HttpOnly=true; Domain=baff-be.onrender.com",
+                "%s=%s; Path=/; Max-Age=%d; SameSite=None; Secure; HttpOnly=true; Domain=baff-be-ckop.onrender.com",
                 key, value, EXPIRATION_TIME_SECONDS
         );
         System.out.println("COOKIE VALUE: " + cookieValue);
