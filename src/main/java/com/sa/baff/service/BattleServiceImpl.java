@@ -70,11 +70,12 @@ public class BattleServiceImpl implements BattleService {
         checkAndEndBattles(user);
 
 
-        List<BattleParticipant> participants = battleParticipantRepository.findAllByUser(user);
+        List<BattleParticipant> participants = battleParticipantRepository.findAllByUserAndRoomDelYn(user, 'N');
 
         Collections.reverse(participants);
 
         List<BattleRoomDto.getBattleRoomList> battleRoomList = participants.stream()
+                .filter(participant -> participant.getRoom().getStatus() == BattleStatus.WAITING)
                 .map(participant -> {
                     BattleRoom battleRoom = participant.getRoom();
 
@@ -250,7 +251,7 @@ public class BattleServiceImpl implements BattleService {
         checkAndEndBattles(user);
 
         /** 사용자가 참여중인 배틀 방의 모든 배틀 참가자 목록 */
-        List<BattleParticipant> participants = battleParticipantRepository.findAllByUser(user);
+        List<BattleParticipant> participants = battleParticipantRepository.findAllByUserAndRoomDelYn(user, 'N');
 
         List<BattleRoomDto.BattleSummaryData> battleSummaryData = participants.stream()
                 .filter(p -> p.getRoom().getStatus() == BattleStatus.IN_PROGRESS)
@@ -332,7 +333,7 @@ public class BattleServiceImpl implements BattleService {
          */
         checkAndEndBattles(user1);
 
-        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUser(user1);
+        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUserAndRoomDelYn(user1, 'N');
 
         List<BattleRoomDto.BattleSummaryData> battleSummaryData = myParticipants.stream()
                 .filter(p -> p.getRoom().getStatus() == BattleStatus.ENDED)
@@ -420,7 +421,7 @@ public class BattleServiceImpl implements BattleService {
     @Transactional
     private void checkAndEndBattles(UserB user) {
         LocalDate now = LocalDate.now();
-        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUser(user);
+        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUserAndRoomDelYn(user, 'N');
 
         myParticipants.forEach(participant -> {
             BattleRoom room = participant.getRoom();

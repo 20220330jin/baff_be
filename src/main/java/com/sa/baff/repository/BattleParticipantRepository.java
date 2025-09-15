@@ -16,7 +16,7 @@ public interface BattleParticipantRepository extends JpaRepository<BattlePartici
     List<BattleParticipant> findAllByRoom(BattleRoom room);
 
      // 유저가 참여한 모든 배틀 참가자 목록 조회
-    List<BattleParticipant> findAllByUser(UserB user);
+    List<BattleParticipant> findAllByUserAndRoomDelYn(UserB user, Character delYn);
 
     // 방에 사용자가 아닌 다른 참가자를 찾는다.
     Optional<BattleParticipant> findByRoomAndUserNot(BattleRoom room, UserB user);
