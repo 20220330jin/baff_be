@@ -4,6 +4,7 @@ import com.sa.baff.domain.Goals;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,4 +19,5 @@ public interface GoalsRepository extends JpaRepository<Goals, Long>, GoalsReposi
      * @return
      */
     Optional<List<Goals>> findByUserIdAndDelYn(Long userId, Character delYn);
+    Optional<List<Goals>> findByUserIdAndDelYnAndEndDateGreaterThanEqual(Long userId, Character delYn, LocalDateTime currentDateTime);
 }

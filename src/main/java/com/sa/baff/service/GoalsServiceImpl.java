@@ -96,11 +96,10 @@ public class GoalsServiceImpl implements GoalsService {
         Optional<Weight> latestWeightOpt = weightRepository.findTopByUserOrderByRecordDateDesc(user);
         Double latestLiveWeight = latestWeightOpt.map(Weight::getWeight).orElse(null);
 
-        List<Goals> goals = goalsRepository.findByUserIdAndDelYn(user.getId(), 'N').orElse(Collections.emptyList());
+        List<Goals> goals = goalsRepository.findByUserIdAndDelYnAndEndDateGreaterThanEqual(user.getId(), 'N', LocalDateTime.now()).orElse(Collections.emptyList());
 
         // 만료되지 않은 목표만 필터링하여 DTO로 변환
         List<GoalsDto.getGoalsList> goalsList = goals.stream()
-                .filter(goal -> !goal.getEndDate().isBefore(LocalDateTime.now()))
                 .map(goal -> {
                     GoalsDto.getGoalsList dto = new GoalsDto.getGoalsList();
                     dto.setGoalsId(goal.getId());
