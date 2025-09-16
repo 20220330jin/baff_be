@@ -64,4 +64,9 @@ public class BattleRestController {
     public void deleteRoom(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
         battleService.deleteRoom(entryCode, socialId);
     }
+
+    @PostMapping("/{entryCode}/leaveRoomByParticipant")
+    public void leaveRoomByParticipant(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
+        battleService.leaveRoomByParticipant(entryCode, socialId);
+    }
 }

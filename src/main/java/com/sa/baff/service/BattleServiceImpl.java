@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -69,8 +68,8 @@ public class BattleServiceImpl implements BattleService {
          */
         checkAndEndBattles(user);
 
-
-        List<BattleParticipant> participants = battleParticipantRepository.findAllByUserAndRoomDelYn(user, 'N');
+        // delYn이 'N'이고 방도 삭제되지 않은 유효한 참가자 목록만 가져옵니다.
+        List<BattleParticipant> participants = battleParticipantRepository.findAllByUserAndDelYnAndRoomDelYn(user, 'N', 'N');
 
         Collections.reverse(participants);
 
@@ -78,6 +77,9 @@ public class BattleServiceImpl implements BattleService {
                 .filter(participant -> participant.getRoom().getStatus() == BattleStatus.WAITING)
                 .map(participant -> {
                     BattleRoom battleRoom = participant.getRoom();
+
+                    long currentParticipants = battleParticipantRepository.findAllByRoomAndDelYn(battleRoom, 'N').size();
+
 
                     BattleRoomDto.getBattleRoomList getBattleRoomList = new BattleRoomDto.getBattleRoomList();
 
@@ -88,7 +90,7 @@ public class BattleServiceImpl implements BattleService {
                     getBattleRoomList.setHostNickName(battleRoom.getHost().getNickname());
                     getBattleRoomList.setStatus(battleRoom.getStatus());
                     getBattleRoomList.setMaxParticipant(battleRoom.getMaxParticipants());
-                    getBattleRoomList.setCurrentParticipant(battleRoom.getParticipants().size());
+                    getBattleRoomList.setCurrentParticipant((int) currentParticipants);
                     getBattleRoomList.setDurationDays(battleRoom.getDurationDays());
                     getBattleRoomList.setStartDate(battleRoom.getStartDate());
                     getBattleRoomList.setEndDate(battleRoom.getEndDate());
@@ -143,7 +145,8 @@ public class BattleServiceImpl implements BattleService {
         BattleRoom battleRoom = battleRoomRepository.findByEntryCode(entryCode)
                 .orElseThrow(() -> new IllegalArgumentException("방을 찾을 수 없습니다."));
 
-        List<BattleParticipant> participants = battleRoom.getParticipants();
+        // Repository에서 delYn이 'N'인 활성 참가자만 조회
+        List<BattleParticipant> participants = battleParticipantRepository.findAllByRoomAndDelYn(battleRoom, 'N');
 
         List<BattleRoomDto.getBattleRoomDetails.ParticipantInfo> participantInfoList = participants.stream()
                 .map(participant -> {
@@ -203,7 +206,7 @@ public class BattleServiceImpl implements BattleService {
                 .orElseThrow(() -> new IllegalArgumentException("방을 찾을 수 없습니다."));
 
         // 2. 해당 방의 참가자(BattleParticipant)를 찾아옴
-        BattleParticipant participant = battleParticipantRepository.findByRoomAndUser(battleRoom, user)
+        BattleParticipant participant = battleParticipantRepository.findByRoomAndUserAndDelYn(battleRoom, user, 'N')
                 .orElseThrow(() -> new IllegalArgumentException("참가자를 찾을 수 없습니다."));
 
         // 3. 목표 정보와 시작 체중 업데이트
@@ -250,8 +253,8 @@ public class BattleServiceImpl implements BattleService {
          */
         checkAndEndBattles(user);
 
-        /** 사용자가 참여중인 배틀 방의 모든 배틀 참가자 목록 */
-        List<BattleParticipant> participants = battleParticipantRepository.findAllByUserAndRoomDelYn(user, 'N');
+        // delYn이 'N'인 유효한 참가자만 가져옵니다.
+        List<BattleParticipant> participants = battleParticipantRepository.findAllByUserAndDelYnAndRoomDelYn(user, 'N', 'N');
 
         Collections.reverse(participants);
 
@@ -260,8 +263,8 @@ public class BattleServiceImpl implements BattleService {
                 .map(participant -> {
                     BattleRoom battleRoom = participant.getRoom();
 
-                    // 상대 참가자를 찾고 조회하여 set한다.
-                    BattleParticipant opponentParticipant = battleParticipantRepository.findByRoomAndUserNot(battleRoom, user)
+                    // 상대 참가자도 delYn이 'N'인 경우만 찾습니다.
+                    BattleParticipant opponentParticipant = battleParticipantRepository.findByRoomAndUserNotAndDelYn(battleRoom, user, 'N')
                             .orElseThrow(() -> new IllegalArgumentException("상대방이 없습니다."));
 
                     // 현재 사용자와 상대방의 최신 체중을 조회 (LocalDate를 LocalDateTime으로 변환하기 위해 atStartOfDay 사용)
@@ -336,7 +339,8 @@ public class BattleServiceImpl implements BattleService {
          */
         checkAndEndBattles(user1);
 
-        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUserAndRoomDelYn(user1, 'N');
+        // 1. delYn이 'N'인 유효한 참가자만 가져옵니다.
+        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUserAndDelYnAndRoomDelYn(user1, 'N', 'N');
 
         List<BattleRoomDto.BattleSummaryData> battleSummaryData = myParticipants.stream()
                 .filter(p -> p.getRoom().getStatus() == BattleStatus.ENDED)
@@ -345,7 +349,7 @@ public class BattleServiceImpl implements BattleService {
                     UserB user = participant.getUser();
 
                     // 2. 상대방 정보 조회
-                    BattleParticipant opponentParticipant = battleParticipantRepository.findByRoomAndUserNot(battleRoom, user)
+                    BattleParticipant opponentParticipant = battleParticipantRepository.findByRoomAndUserNotAndDelYn(battleRoom, user, 'N')
                             .orElseThrow(() -> new IllegalArgumentException("상대방이 없습니다."));
 
                     // 3. 최종 체중 정보 조회
@@ -418,13 +422,20 @@ public class BattleServiceImpl implements BattleService {
 
     }
 
+    @Override
+    public void leaveRoomByParticipant(String entryCode, String socialId) {
+        UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        battleParticipantRepository.leaveRoomByParticipant(user.getId(), entryCode);
+    }
+
     /**
      * 만료된 배틀의 상태를 업데이트하는 내부 로직
      */
     @Transactional
     private void checkAndEndBattles(UserB user) {
         LocalDate now = LocalDate.now();
-        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUserAndRoomDelYn(user, 'N');
+        List<BattleParticipant> myParticipants = battleParticipantRepository.findAllByUserAndDelYnAndRoomDelYn(user, 'N', 'N');
 
         myParticipants.forEach(participant -> {
             BattleRoom room = participant.getRoom();
