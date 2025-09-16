@@ -88,6 +88,37 @@ public class GoalsServiceImpl implements GoalsService {
     }
 
     @Override
+    public List<GoalsDto.getGoalsList> getActiveGoalsList(String socialId) {
+        // 사용자 확인
+        UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // 최종 체중 계산을 위한 현재 체중 조회
+        Optional<Weight> latestWeightOpt = weightRepository.findTopByUserOrderByRecordDateDesc(user);
+        Double latestLiveWeight = latestWeightOpt.map(Weight::getWeight).orElse(null);
+
+        List<Goals> goals = goalsRepository.findByUserIdAndDelYn(user.getId(), 'N').orElse(Collections.emptyList());
+
+        // 만료되지 않은 목표만 필터링하여 DTO로 변환
+        List<GoalsDto.getGoalsList> goalsList = goals.stream()
+                .filter(goal -> !goal.getEndDate().isBefore(LocalDateTime.now()))
+                .map(goal -> {
+                    GoalsDto.getGoalsList dto = new GoalsDto.getGoalsList();
+                    dto.setGoalsId(goal.getId());
+                    dto.setTitle(goal.getTitle());
+                    dto.setStartDate(goal.getStartDate());
+                    dto.setEndDate(goal.getEndDate());
+                    dto.setStartWeight(goal.getStartWeight());
+                    dto.setTargetWeight(goal.getTargetWeight());
+                    dto.setIsExpired(false); // 위의 필터를 통해서 항상 false를 반환
+                    dto.setCurrentWeight(latestLiveWeight);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        return goalsList;
+    }
+
+    @Override
     public void deleteGoal(Long goalId) {
         goalsRepository.deleteGoals(goalId);
     }

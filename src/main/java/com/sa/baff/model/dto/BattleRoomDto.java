@@ -102,6 +102,7 @@ public class BattleRoomDto {
         private Integer totalDays;
         private Integer daysRemaining;
         private String winner;
+        private String roomName;
     }
 
 //    @Getter

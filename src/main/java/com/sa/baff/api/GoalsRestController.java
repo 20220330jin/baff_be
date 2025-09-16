@@ -32,6 +32,14 @@ public class GoalsRestController {
     }
 
     /**
+     * 진행중인 목표 리스트만 조회하는 API
+     */
+    @GetMapping("/getActiveGoalsList")
+    public List<GoalsDto.getGoalsList> getActiveGoalsList(@AuthenticationPrincipal String socialId) {
+        return goalsService.getActiveGoalsList(socialId);
+    }
+
+    /**
      * 목표 삭제 api
      * @param goalId
      */

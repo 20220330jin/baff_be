@@ -253,6 +253,8 @@ public class BattleServiceImpl implements BattleService {
         /** 사용자가 참여중인 배틀 방의 모든 배틀 참가자 목록 */
         List<BattleParticipant> participants = battleParticipantRepository.findAllByUserAndRoomDelYn(user, 'N');
 
+        Collections.reverse(participants);
+
         List<BattleRoomDto.BattleSummaryData> battleSummaryData = participants.stream()
                 .filter(p -> p.getRoom().getStatus() == BattleStatus.IN_PROGRESS)
                 .map(participant -> {
@@ -315,6 +317,7 @@ public class BattleServiceImpl implements BattleService {
                             .totalDays((int) totalDays)
                             .daysRemaining((int) daysRemaining)
                             .winner(winner)
+                            .roomName(battleRoom.getName())
                             .build();
                 })
                 .collect(Collectors.toList());

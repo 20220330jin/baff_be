@@ -22,6 +22,11 @@ public interface GoalsService {
     List<GoalsDto.getGoalsList> getGoalsList(String socialId);
 
     /**
+     * 현재 진행중인 목표 리스트만 조회
+     */
+    List<GoalsDto.getGoalsList> getActiveGoalsList(String socialId);
+
+    /**
      * 목표 삭제 서비스
      * @param goalId
      */
