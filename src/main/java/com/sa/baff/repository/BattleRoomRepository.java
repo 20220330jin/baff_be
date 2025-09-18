@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface BattleRoomRepository extends JpaRepository<BattleRoom, Long>, BattleRoomRepositoryCustom {
     Optional<BattleRoom> findByEntryCode(String entryCode);
+
+    Long findRoomIdByEntryCode(String entryCode);
 }
