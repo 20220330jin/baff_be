@@ -4,6 +4,7 @@ import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -55,9 +56,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ResponseEntity<?> userLogout(HttpServletResponse response) {
-        String cookieHeader = String.format("accessToken=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=None; Domain=%s", "baff-be.onrender.com");
+    public ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response) {
+        String dynamicDomain = determineCookieDomain(request); // 동적으로 도메인 결정
+
+        String cookieHeader = String.format("accessToken=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=None; Domain=%s", dynamicDomain);
         response.setHeader("Set-Cookie", cookieHeader);
+        System.out.println("=================LOGOUT");
         return ResponseEntity.ok("Logged out successfully");
     }
 
@@ -71,5 +75,14 @@ public class UserServiceImpl implements UserService {
 
         // 변경된 내용을 저장
         userRepository.save(user);
+    }
+
+    private String determineCookieDomain(HttpServletRequest request) {
+        String origin = request.getHeader("Origin");
+        if (origin != null && origin.contains("localhost")) {
+            return "localhost"; // 로컬 환경에서는 localhost 도메인 사용
+        }
+        // 배포 환경에서는 이전에 확인했던 점(.) 포함 도메인으로 통일
+        return ".baff-be-ckop.onrender.com";
     }
 }

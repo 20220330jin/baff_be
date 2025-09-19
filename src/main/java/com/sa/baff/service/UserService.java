@@ -2,6 +2,7 @@ package com.sa.baff.service;
 
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 
@@ -27,7 +28,7 @@ public interface UserService {
      */
     UserBDto.getUserInfo getUserInfoForProfile(Long userId);
 
-    ResponseEntity<?> userLogout(HttpServletResponse response);
+    ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response);
 
     void insertHeight(String socialId, Double height);
 }
