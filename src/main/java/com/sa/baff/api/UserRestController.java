@@ -3,6 +3,7 @@ package com.sa.baff.api;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -64,8 +65,8 @@ public class UserRestController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> userLogout(HttpServletResponse response) {
-            return this.userService.userLogout(response);
+    public ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response) {
+            return this.userService.userLogout(request, response);
         }
 
     @PostMapping("/insertHeight")

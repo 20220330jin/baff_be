@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -29,9 +30,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
-            String token = parseCookie(request);
+            System.out.println("-----JwtAuthenticationFilter - Request URI: " + request);
+//            String token = parseCookie(request);
+            String token = parseBearerToken(request);
+
+            if (token == null || token.equalsIgnoreCase("null")) {
+                token = parseCookie(request);
+            }
+
+            System.out.println("-----JwtAuthenticationFilter - Parsed Token: " + token);
             if (token != null && !token.equalsIgnoreCase("null")) {
                 String userId = jwtProvider.validate(token);
+
+                System.out.println("=====JwtAuthenticationFilter - User ID from token: " + userId);
+                System.out.println("=====JwtAuthenticationFilter - Token: " + token);
+                System.out.println("=====JwtAuthenticationFilter - VALIDATE: " + jwtProvider.validate(token));
 
                 AbstractAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userId,
@@ -59,6 +72,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return cookie.getValue();
                 }
             }
+        }
+        return null;
+    }
+
+    private String parseBearerToken(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7); // "Bearer " 접두사 제거
         }
         return null;
     }
