@@ -37,5 +37,15 @@ public class WeightRestController {
         return weightService.getCurrentWeight(socialId);
     }
 
+    /**
+     * 유저의 특정 기간 체중 기록 조회 API
+     * - 배틀 진행 중 탭에서 유저의 체중 변화를 알기 위함
+     */
+    @GetMapping("/getBattleWeightHistory")
+    public List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(@ModelAttribute WeightVO.getBattleWeightHistoryParam getBattleWeightHistoryParam) {
+        System.out.println( "______________________------- " + getBattleWeightHistoryParam.getUserId());
 
+        return weightService.getBattleWeightHistory(getBattleWeightHistoryParam);
+    }
 }
+

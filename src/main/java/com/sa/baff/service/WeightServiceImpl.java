@@ -104,4 +104,11 @@ public class WeightServiceImpl implements WeightService {
 
         return weightInfo;
     }
+
+    @Override
+    public List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(WeightVO.getBattleWeightHistoryParam param) {
+        List<WeightDto.getBattleWeightHistory> getBattleWeightHistory = weightRepository.getBattleWeightHistory(param);
+
+        return getBattleWeightHistory;
+    }
 }
