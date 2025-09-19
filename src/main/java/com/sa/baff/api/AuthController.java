@@ -61,8 +61,9 @@ public class AuthController {
             String email = payload.getEmail();
             String name = (String) payload.get("name");
             String profileUrl = (String) payload.get("picture");
-
+            System.out.println("===== start fetch user");
             UserB user = userService.findOrCreateSocialUser(googleUserId, email, name, profileUrl, "google");
+            System.out.println("=====: USERFROMAPP: " + user);
 
             // 2. 백엔드 사용자 처리 (찾거나 새로 생성)
             // TODO: 실제 서비스에서는 이메일, Google ID 등을 기반으로 사용자 정보를 조회하거나 새로 생성하는 로직이 필요합니다.
