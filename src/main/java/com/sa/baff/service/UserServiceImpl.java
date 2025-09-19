@@ -87,6 +87,7 @@ public class UserServiceImpl implements UserService {
         if(userEntity == null) {
             userEntity = new UserB(email, name, profileUrl, socialId, provider, platform);
             System.out.println("=====New user registered: " + socialId);
+            userRepository.save(userEntity);
         } else {
             System.out.println("=====Existing user logged in: " + socialId);
         }
