@@ -103,6 +103,8 @@ public class BattleRoomDto {
         private Integer daysRemaining;
         private String winner;
         private String roomName;
+        private GoalType myGoalType;
+        private GoalType opponentGoalType;
     }
 
 //    @Getter

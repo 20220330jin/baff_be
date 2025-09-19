@@ -45,4 +45,18 @@ public class WeightDto {
             this.currentWeight = currentWeight;
         }
     }
+
+    @Getter
+    @Setter
+    public static class getBattleWeightHistory {
+        // 체중
+        private Double recordWeight;
+        // 체중 기록 일자
+        private LocalDateTime recordDate;
+
+        public getBattleWeightHistory( Double recordWeight, LocalDateTime recordDate) {
+            this.recordWeight = recordWeight;
+            this.recordDate = recordDate;
+        }
+    }
 }

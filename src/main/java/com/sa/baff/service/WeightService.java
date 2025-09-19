@@ -21,4 +21,6 @@ public interface WeightService {
      * @return
      */
     WeightDto.getCurrentWeight getCurrentWeight(String socialId);
+
+    List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(WeightVO.getBattleWeightHistoryParam getBattleWeightHistoryParam);
 }

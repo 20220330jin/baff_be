@@ -276,17 +276,47 @@ public class BattleServiceImpl implements BattleService {
                             .map(Weight::getWeight)
                             .orElse(opponentParticipant.getStartingWeight());
 
-                    // 목표 감량량을 계산합니다.
-                    Double myTargetWeightLoss = calculateTargetWeightLoss(participant);
-                    Double opponentTargetWeightLoss = calculateTargetWeightLoss(opponentParticipant);
+                    double myProgress = 0.0;
+                    double myWeightChange = 0.0;
+                    GoalType myGoalType = participant.getGoalType();
 
-                    // 진행률 및 감량량을 계산
-                    Double myWeightLoss = myCurrentWeight != null ? participant.getStartingWeight() - myCurrentWeight : 0.0;
-                    Double opponentWeightLoss = opponentCurrentWeight != null ? opponentParticipant.getStartingWeight() - opponentCurrentWeight : 0.0;
+                    if (myGoalType == GoalType.WEIGHT_LOSS || myGoalType == GoalType.PERCENTAGE_LOSS) {
+                        myWeightChange = participant.getStartingWeight() - myCurrentWeight;
+                        Double myTargetWeightLoss = calculateTargetWeightLoss(participant);
+                        if (myTargetWeightLoss != null && myTargetWeightLoss > 0) {
+                            myProgress = (myWeightChange / myTargetWeightLoss) * 100;
+                        }
+                    } else if (myGoalType == GoalType.WEIGHT_GAIN) {
+                        myWeightChange = myCurrentWeight - participant.getStartingWeight();
+                        if (participant.getTargetValue() != null && participant.getTargetValue() > 0) {
+                            myProgress = (myWeightChange / participant.getTargetValue()) * 100;
+                        }
+                    } else if (myGoalType == GoalType.MAINTAIN) {
+                        // 유지 목표는 시작 체중과의 차이가 적을수록 높은 점수를 받습니다.
+                        // 음수 값으로 계산하여 0에 가까울수록 좋은 결과가 되도록 합니다.
+                        myWeightChange = myCurrentWeight - participant.getStartingWeight();
+                        myProgress = -Math.abs(myWeightChange);
+                    }
 
-                    Double myProgress = (myTargetWeightLoss != null && myTargetWeightLoss > 0) ? (myWeightLoss / myTargetWeightLoss) * 100 : 0.0;
-                    Double opponentProgress = (opponentTargetWeightLoss != null && opponentTargetWeightLoss > 0) ? (opponentWeightLoss / opponentTargetWeightLoss) * 100 : 0.0;
+                    double opponentProgress = 0.0;
+                    double opponentWeightChange = 0.0;
+                    GoalType opponentGoalType = opponentParticipant.getGoalType();
 
+                    if (opponentGoalType == GoalType.WEIGHT_LOSS || opponentGoalType == GoalType.PERCENTAGE_LOSS) {
+                        opponentWeightChange = opponentParticipant.getStartingWeight() - opponentCurrentWeight;
+                        Double opponentTargetWeightLoss = calculateTargetWeightLoss(opponentParticipant);
+                        if (opponentTargetWeightLoss != null && opponentTargetWeightLoss > 0) {
+                            opponentProgress = (opponentWeightChange / opponentTargetWeightLoss) * 100;
+                        }
+                    } else if (opponentGoalType == GoalType.WEIGHT_GAIN) {
+                        opponentWeightChange = opponentCurrentWeight - opponentParticipant.getStartingWeight();
+                        if (opponentParticipant.getTargetValue() != null && opponentParticipant.getTargetValue() > 0) {
+                            opponentProgress = (opponentWeightChange / opponentParticipant.getTargetValue()) * 100;
+                        }
+                    } else if (opponentGoalType == GoalType.MAINTAIN) {
+                        opponentWeightChange = opponentCurrentWeight - opponentParticipant.getStartingWeight();
+                        opponentProgress = -Math.abs(opponentWeightChange);
+                    }
                     // 기간을 계산합니다.
                     LocalDate now = LocalDate.now();
                     long totalDays = ChronoUnit.DAYS.between(battleRoom.getStartDate(), battleRoom.getEndDate());
@@ -298,6 +328,24 @@ public class BattleServiceImpl implements BattleService {
                         winner = "me";
                     } else if (opponentProgress > myProgress) {
                         winner = "opponent";
+                    }
+
+                    Double myTargetWeightLoss = null;
+                    if (myGoalType == GoalType.WEIGHT_LOSS || myGoalType == GoalType.PERCENTAGE_LOSS) {
+                        myTargetWeightLoss = calculateTargetWeightLoss(participant);
+                    } else if (myGoalType == GoalType.WEIGHT_GAIN) {
+                        myTargetWeightLoss = participant.getTargetValue();
+                    } else if (myGoalType == GoalType.MAINTAIN) {
+                        myTargetWeightLoss = 0.0;
+                    }
+
+                    Double opponentTargetWeightLoss = null;
+                    if (opponentGoalType == GoalType.WEIGHT_LOSS || opponentGoalType == GoalType.PERCENTAGE_LOSS) {
+                        opponentTargetWeightLoss = calculateTargetWeightLoss(opponentParticipant);
+                    } else if (opponentGoalType == GoalType.WEIGHT_GAIN) {
+                        opponentTargetWeightLoss = opponentParticipant.getTargetValue();
+                    } else if (opponentGoalType == GoalType.MAINTAIN) {
+                        opponentTargetWeightLoss = 0.0;
                     }
 
                     return BattleRoomDto.BattleSummaryData.builder()
@@ -313,14 +361,16 @@ public class BattleServiceImpl implements BattleService {
                             .startDate(battleRoom.getStartDate())
                             .endDate(battleRoom.getEndDate())
                             .status(battleRoom.getStatus().toString())
-                            .myWeightLoss(myWeightLoss)
-                            .opponentWeightLoss(opponentWeightLoss)
+                            .myWeightLoss(myWeightChange)
+                            .opponentWeightLoss(opponentWeightChange)
                             .myProgress(myProgress)
                             .opponentProgress(opponentProgress)
                             .totalDays((int) totalDays)
                             .daysRemaining((int) daysRemaining)
                             .winner(winner)
                             .roomName(battleRoom.getName())
+                            .myGoalType(participant.getGoalType())
+                            .opponentGoalType(opponentParticipant.getGoalType())
                             .build();
                 })
                 .collect(Collectors.toList());
