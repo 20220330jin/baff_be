@@ -33,6 +33,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             System.out.println("-----JwtAuthenticationFilter - Request URI: " + request);
 //            String token = parseCookie(request);
             String token = parseBearerToken(request);
+
+            if (token == null || token.equalsIgnoreCase("null")) {
+                token = parseCookie(request);
+            }
+
             System.out.println("-----JwtAuthenticationFilter - Parsed Token: " + token);
             if (token != null && !token.equalsIgnoreCase("null")) {
                 String userId = jwtProvider.validate(token);
@@ -77,5 +82,5 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return bearerToken.substring(7); // "Bearer " 접두사 제거
         }
         return null;
-         }
+    }
 }

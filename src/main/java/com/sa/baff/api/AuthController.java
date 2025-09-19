@@ -79,7 +79,7 @@ public class AuthController {
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("token", backendJwt);
             // TODO: 실제 사용자 정보 객체를 반환하도록 수정
-            responseBody.put("user", Map.of("email", email, "name", name, "socialId", user.getSocialId()));
+            responseBody.put("user", Map.of("email", email, "name", name, "socialId", user.getSocialId(), "userId", user.getId()));
 
             return ResponseEntity.ok(responseBody);
 
