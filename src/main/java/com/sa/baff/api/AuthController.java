@@ -64,6 +64,9 @@ public class AuthController {
             // 3. 백엔드-issued JWT 생성
             String backendJwt = jwtProvider.create(userId);
 
+            System.out.println("Google Mobile Login Success: " + email + ", " + name + ", " + userId);
+            System.out.println("Generated Backend JWT: " + backendJwt);
+
             // 4. 응답 반환
             Map<String, Object> responseBody = new HashMap<>();
             responseBody.put("token", backendJwt);
