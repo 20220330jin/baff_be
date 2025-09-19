@@ -1,5 +1,6 @@
 package com.sa.baff.service;
 
+import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,4 +32,6 @@ public interface UserService {
     ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response);
 
     void insertHeight(String socialId, Double height);
+
+    UserB findOrCreateSocialUser(String socialId, String email, String name, String profileUrl, String provider);
 }

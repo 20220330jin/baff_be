@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -75,6 +76,21 @@ public class UserServiceImpl implements UserService {
 
         // 변경된 내용을 저장
         userRepository.save(user);
+    }
+
+    @Override
+    public UserB findOrCreateSocialUser(String socialId, String email, String name, String profileUrl, String provider) {
+        UserB userEntity = userRepository.findBySocialId(socialId).orElse(null);
+
+        String platform = "ANDROID";
+
+        if(userEntity == null) {
+            userEntity = new UserB(email, name, profileUrl, socialId, provider, platform);
+            System.out.println("New user registered: " + socialId);
+        } else {
+            System.out.println("Existing user logged in: " + socialId);
+        }
+        return userEntity;
     }
 
     private String determineCookieDomain(HttpServletRequest request) {

@@ -41,6 +41,8 @@ public class UserB extends BaseEntity {
 
     private String provider;
 
+    private String platform;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Goals> goals = new ArrayList<>();
 
@@ -48,13 +50,14 @@ public class UserB extends BaseEntity {
     private List<Weight> weights = new ArrayList<>();
 
     // 소셜 로그인 시 사용자 생성을 위한 생성자
-    public UserB(String email, String nickname, String profileImageUrl, String socialId, String platform) {
+    public UserB(String email, String nickname, String profileImageUrl, String socialId, String provider, String platform) {
         super(DateTimeUtils.now(), DateTimeUtils.now());
         this.email = email;
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
         this.socialId = socialId;
         this.role = Role.USER; // 기본 역할은 USER로 설정
-        this.provider = platform;
+        this.provider = provider;
+        this.platform = platform;
     }
 }
