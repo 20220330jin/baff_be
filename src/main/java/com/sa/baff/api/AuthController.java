@@ -59,7 +59,7 @@ public class AuthController {
 
             // 2. 백엔드 사용자 처리 (찾거나 새로 생성)
             // TODO: 실제 서비스에서는 이메일, Google ID 등을 기반으로 사용자 정보를 조회하거나 새로 생성하는 로직이 필요합니다.
-            String userId = "google_" + googleUserId; // 백엔드에서 관리할 사용자 ID 형식 (예시)
+            String userId = googleUserId; // 백엔드에서 관리할 사용자 ID 형식 (예시)
 
             // 3. 백엔드-issued JWT 생성
             String backendJwt = jwtProvider.create(userId);
