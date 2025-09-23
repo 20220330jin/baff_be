@@ -49,6 +49,9 @@ public class UserB extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Weight> weights = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<LoginHistory> loginHistories = new ArrayList<>();
+
     // 소셜 로그인 시 사용자 생성을 위한 생성자
     public UserB(String email, String nickname, String profileImageUrl, String socialId, String provider, String platform) {
         super(DateTimeUtils.now(), DateTimeUtils.now());
