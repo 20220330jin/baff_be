@@ -41,7 +41,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         saveLoginHistory(userId, userAgent);
 
         // --- 현재 활성화된 코드: 배포 환경용 ---
-        createAndSetCookieForProduction(response, "accessToken", token);
+        createAndSetCookieForDevelopment(response, "accessToken", token);
         String redirectUrl = "https://baff-fe.vercel.app/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
         response.sendRedirect(redirectUrl);
 
