@@ -15,5 +15,4 @@ public interface UserRepository extends CrudRepository<UserB, Long>, UserReposit
     List<UserB> findAllByIdIn(List<Long> ids);
 
     Optional<UserB> findBySocialId(String socialId);
-
 }
