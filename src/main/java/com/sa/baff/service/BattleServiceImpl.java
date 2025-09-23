@@ -479,6 +479,12 @@ public class BattleServiceImpl implements BattleService {
         battleParticipantRepository.leaveRoomByParticipant(user.getId(), entryCode);
     }
 
+    @Override
+    public List<BattleRoomDto.getParticipantsList> getParticipantsList(String entryCode) {
+
+       return battleParticipantRepository.getParticipantsList(entryCode);
+    }
+
     /**
      * 만료된 배틀의 상태를 업데이트하는 내부 로직
      */

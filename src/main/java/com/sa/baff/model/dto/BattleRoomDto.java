@@ -2,6 +2,7 @@ package com.sa.baff.model.dto;
 
 import com.sa.baff.util.BattleStatus;
 import com.sa.baff.util.GoalType;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -107,9 +108,15 @@ public class BattleRoomDto {
         private GoalType opponentGoalType;
     }
 
-//    @Getter
-//    @Setter
-//    public static getTotalBattleList {
-//
-//    }
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    public static class getParticipantsList {
+        private String userNickName;
+        private Long userId;
+        private Double startingWeight;
+        private GoalType goalType;
+        private Double targetValue;
+        private boolean isReady;
+    }
 }

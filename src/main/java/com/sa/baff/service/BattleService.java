@@ -78,4 +78,11 @@ public interface BattleService {
      * @param socialId
      */
     void leaveRoomByParticipant(String entryCode, String socialId);
+
+    /**
+     * 특정 대결 방에 입장한 참가자 정보 리스트를 반환
+     * @param entryCode
+     * @return
+     */
+    List<BattleRoomDto.getParticipantsList> getParticipantsList(String entryCode);
 }
