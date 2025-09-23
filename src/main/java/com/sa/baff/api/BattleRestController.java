@@ -69,4 +69,9 @@ public class BattleRestController {
     public void leaveRoomByParticipant(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
         battleService.leaveRoomByParticipant(entryCode, socialId);
     }
+
+    @GetMapping("/{entryCode}/getParticipantsList")
+    public List<BattleRoomDto.getParticipantsList> getParticipantsList(@PathVariable String entryCode) {
+        return battleService.getParticipantsList(entryCode);
+    }
 }
