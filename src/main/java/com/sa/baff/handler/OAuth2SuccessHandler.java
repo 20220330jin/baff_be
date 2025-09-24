@@ -40,17 +40,28 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         String userAgent = request.getHeader("User-Agent");
         saveLoginHistory(userId, userAgent);
 
-        // --- 현재 활성화된 코드: 배포 환경용 ---
-        createAndSetCookieForDevelopment(response, "accessToken", token);
-        String redirectUrl = "https://baff-fe.vercel.app/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
+        // 요청이 들어온 서버의 호스트 이름을 기준으로 환경을 구분합니다.
+        String serverName = request.getServerName();
+        System.out.println("Request Server Name: " + serverName);
+
+        String redirectUrl;
+
+        if ("localhost".equalsIgnoreCase(serverName)) {
+            // --- 로컬 환경 ---
+            System.out.println("Environment: LOCAL");
+            createAndSetCookieForLocal(response, "accessToken", token);
+            redirectUrl = "http://localhost:5173/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
+        } else {
+            // --- 배포 환경 (개발/운영) ---
+            // 참고: 현재 구조에서는 요청의 호스트 이름만으로는 개발(vercel)과 운영(change-up.me) 프론트엔드를 구분할 수 없습니다.
+            // 두 환경 모두 동일한 백엔드(baff-be-ckop.onrender.com)를 호출하기 때문입니다.
+            // 따라서 배포 환경에서는 우선 운영 도메인으로 리디렉션하도록 처리합니다.
+            System.out.println("Environment: DEPLOYED");
+            createAndSetCookieForProduction(response, "accessToken", token);
+            redirectUrl = "https://change-up.me/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
+        }
+
         response.sendRedirect(redirectUrl);
-
-
-        // --- 로컬 환경에서 사용시 아래 코드로 교체 ---
-//        createAndSetCookieForLocal(response, "accessToken", token);
-//        String localRedirectUrl = "http://localhost:5173/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
-//        response.sendRedirect(localRedirectUrl);
-
     }
 
     private void createAndSetCookieForProduction(HttpServletResponse response, String key, String value) {

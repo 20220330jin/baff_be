@@ -19,5 +19,6 @@ public interface GoalsRepository extends JpaRepository<Goals, Long>, GoalsReposi
      * @return
      */
     Optional<List<Goals>> findByUserIdAndDelYn(Long userId, Character delYn);
+    
     Optional<List<Goals>> findByUserIdAndDelYnAndEndDateGreaterThanEqual(Long userId, Character delYn, LocalDateTime currentDateTime);
 }

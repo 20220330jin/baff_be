@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -58,11 +60,30 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response) {
-        String dynamicDomain = determineCookieDomain(request); // 동적으로 도메인 결정
+        if ("https://www.change-up.me".equals(request.getHeader("Origin"))) {
+            // 운영 환경의 경우
+            ResponseCookie deleteCookie = ResponseCookie.from("accessToken", "") // 값을 비움
+                    .path("/")
+                    .maxAge(0) // Max-Age를 0으로 설정하여 즉시 삭제
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("Lax") // 운영 환경 로그인 시 사용했던 SameSite 속성
+                    .domain(".change-up.me") // 운영 환경의 공통 상위 도메인
+                    .build();
 
-        String cookieHeader = String.format("accessToken=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=None; Domain=%s", dynamicDomain);
-        response.setHeader("Set-Cookie", cookieHeader);
-        System.out.println("=================LOGOUT");
+            response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
+            System.out.println("=================LOGOUT (Production)");
+
+
+        } else {
+            // 로컬 or 개발환경인경우
+            String dynamicDomain = determineCookieDomain(request); // 동적으로 도메인 결정
+
+            String cookieHeader = String.format("accessToken=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=None; Domain=%s", dynamicDomain);
+            response.setHeader("Set-Cookie", cookieHeader);
+            System.out.println("=================LOGOUT");
+        }
+
         return ResponseEntity.ok("Logged out successfully");
     }
 
@@ -84,7 +105,7 @@ public class UserServiceImpl implements UserService {
 
         String platform = "ANDROID";
 
-        if(userEntity == null) {
+        if (userEntity == null) {
             userEntity = new UserB(email, name, profileUrl, socialId, provider, platform);
             System.out.println("=====New user registered: " + socialId);
             userRepository.save(userEntity);
