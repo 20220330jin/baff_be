@@ -30,6 +30,10 @@ public class UserBDto {
         private Role role;
         /* 유저 상태 */
         private String status;
+        /* Platform */
+        private String platform;
+        /* Provider */
+        private String provider;
     }
 
     /**

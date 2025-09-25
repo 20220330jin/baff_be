@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserBDto.getUserList> getUserList() {
 
-        Iterable<UserB> user = userRepository.findAll();
+        Iterable<UserB> user = userRepository.findAllByOrderByRegDateTimeDesc();
         List<UserBDto.getUserList> userDtoList = new ArrayList<>();
 
         for (UserB userB : user) {
@@ -46,6 +46,8 @@ public class UserServiceImpl implements UserService {
             userDto.setRegDateTime(userB.getRegDateTime());
             userDto.setRole(userB.getRole());
             userDto.setStatus(userB.getDelYn().equals('N') ? "ACTIVE" : "INACTIVE");
+            userDto.setPlatform(userB.getPlatform());
+            userDto.setProvider(userB.getProvider());
 
             userDtoList.add(userDto);
         }
