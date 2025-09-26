@@ -324,9 +324,9 @@ public class BattleServiceImpl implements BattleService {
 
                     // 승자를 결정 (진행률 기준으로)
                     String winner = "tie";
-                    if (myProgress > opponentProgress) {
+                    if (Math.round(myProgress) > Math.round(opponentProgress)) {
                         winner = "me";
-                    } else if (opponentProgress > myProgress) {
+                    } else if (Math.round(opponentProgress) > Math.round(myProgress)) {
                         winner = "opponent";
                     }
 
