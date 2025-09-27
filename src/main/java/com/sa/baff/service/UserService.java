@@ -34,4 +34,6 @@ public interface UserService {
     void insertHeight(String socialId, Double height);
 
     UserB findOrCreateSocialUser(String socialId, String email, String name, String profileUrl, String provider);
+
+    void withdrawal(String socialId);
 }

@@ -21,7 +21,7 @@ public class UserB extends BaseEntity {
     @Column(name = "userId")
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String email; // 이메일
 
     @Column(nullable = false)

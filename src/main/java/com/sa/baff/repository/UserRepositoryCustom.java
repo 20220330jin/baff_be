@@ -12,4 +12,6 @@ public interface UserRepositoryCustom {
      * @return
      */
     UserBDto.getUserInfo getUserInfoForProfile(Long userId);
+
+    void withdrawal(Long userId);
 }

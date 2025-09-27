@@ -3,7 +3,8 @@ package com.sa.baff.service;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.repository.*;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto getUserInfo(String userId) {
         // userId는 JWT의 subject로, UserEntity의 socialId와 매핑됩니다.
-        UserB user = userRepository.findUserIdBySocialId(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(userId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
         return UserDto.from(user);
     }
 
@@ -92,7 +92,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void insertHeight(String socialId, Double height) {
         // socialId를 사용하여 데이터베이스에서 유저를 찾음
-        UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // 찾은 유저의 height 필드를 업데이트
         user.setHeight(height);
@@ -115,6 +115,14 @@ public class UserServiceImpl implements UserService {
             System.out.println("=====Existing user logged in: " + socialId);
         }
         return userEntity;
+    }
+
+    @Override
+    @Transactional
+    public void withdrawal(String socialId) {
+        UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        userRepository.withdrawal(user.getId());
     }
 
     private String determineCookieDomain(HttpServletRequest request) {

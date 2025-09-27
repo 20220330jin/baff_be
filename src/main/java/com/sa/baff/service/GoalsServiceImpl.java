@@ -33,7 +33,7 @@ public class GoalsServiceImpl implements GoalsService {
     @Override
     public void recordGoals(GoalsVO.recordGoals recordGoalsParam) {
         // 유저 정보 조회
-        UserB user = userRepository.findUserIdBySocialId(recordGoalsParam.getSocialId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(recordGoalsParam.getSocialId(), 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         LocalDateTime startDate = DateTimeUtils.now();
         LocalDateTime endDate = startDate;
@@ -52,7 +52,7 @@ public class GoalsServiceImpl implements GoalsService {
     @Override
     public List<GoalsDto.getGoalsList> getGoalsList(String socialId) {
         // 사용자 확인
-        UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         // 최종 체중 계산을 위한 현재 체중 조회
         Optional<Weight> latestWeightOpt = weightRepository.findTopByUserOrderByRecordDateDesc(user);
@@ -90,7 +90,7 @@ public class GoalsServiceImpl implements GoalsService {
     @Override
     public List<GoalsDto.getGoalsList> getActiveGoalsList(String socialId) {
         // 사용자 확인
-        UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId,'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         // 최종 체중 계산을 위한 현재 체중 조회
         Optional<Weight> latestWeightOpt = weightRepository.findTopByUserOrderByRecordDateDesc(user);

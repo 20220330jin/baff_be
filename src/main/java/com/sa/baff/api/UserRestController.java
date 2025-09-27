@@ -73,4 +73,9 @@ public class UserRestController {
     public void insertHeight(@AuthenticationPrincipal String socialId, @RequestBody Double height) {
         userService.insertHeight(socialId, height);
     }
+
+    @PostMapping("/withdrawal")
+    public void withdrawal(@AuthenticationPrincipal String socialId) {
+        userService.withdrawal(socialId);
+    }
 }

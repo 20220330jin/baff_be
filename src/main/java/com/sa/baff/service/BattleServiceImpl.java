@@ -36,7 +36,7 @@ public class BattleServiceImpl implements BattleService {
 
     @Override
     public void createBattleRoom(BattleRoomVO.createBattleRoom createBattleRoomParam) {
-        UserB host = userRepository.findUserIdBySocialId(createBattleRoomParam.getSocialId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB host = userRepository.findUserIdBySocialIdAndDelYn(createBattleRoomParam.getSocialId(), 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         String entryCode = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
 
@@ -62,7 +62,7 @@ public class BattleServiceImpl implements BattleService {
 
     @Override
     public List<BattleRoomDto.getBattleRoomList> getBattleRoomList(String socialId) {
-        UserB user = userRepository.findUserIdBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
         /**
          * 배틀 목록을 조회하기 전, 만료된 배틀의 상태를 업데이트
          */
@@ -245,7 +245,7 @@ public class BattleServiceImpl implements BattleService {
      */
     @Override
     public BattleRoomDto.ActiveBattleData activeBattles(String socialId) {
-        UserB user = userRepository.findUserIdBySocialId(socialId)
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         /**
@@ -381,7 +381,7 @@ public class BattleServiceImpl implements BattleService {
     }
 
     public BattleRoomDto.ActiveBattleData getEndedBattles(String socialId) {
-        UserB user1 = userRepository.findUserIdBySocialId(socialId)
+        UserB user1 = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         /**

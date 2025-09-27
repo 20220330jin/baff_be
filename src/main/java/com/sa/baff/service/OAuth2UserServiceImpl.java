@@ -48,7 +48,7 @@ public class OAuth2UserServiceImpl extends DefaultOAuth2UserService {
             userEmail = kakaoAccount != null ? (String) kakaoAccount.get("email") : null;
             userProfileUrl = properties != null ? (String) properties.get("profile_image") : null;
             
-            if (!userRepository.existsBySocialId(userId)) {
+            if (!userRepository.existsBySocialIdAndDelYn(userId, 'N')) {
                 userEntity = new UserB(userEmail, userNickname, userProfileUrl, userId, "kakao", platform);
                 userRepository.save(userEntity);
             }
@@ -60,7 +60,7 @@ public class OAuth2UserServiceImpl extends DefaultOAuth2UserService {
             userEmail = googleInfo.get("email").toString();
             userProfileUrl = googleInfo.get("picture").toString();
 
-            if (!userRepository.existsBySocialId(userId)) {
+            if (!userRepository.existsBySocialIdAndDelYn(userId, 'N')) {
                 userEntity = new UserB(userEmail, userName, userProfileUrl, userId, "google", platform);
                 userRepository.save(userEntity);
             }
