@@ -15,10 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -83,6 +80,9 @@ public class GoalsServiceImpl implements GoalsService {
                     return dto;
                 })
                 .collect(Collectors.toList());
+
+        // 정렬 -> 만료된 목표는 뒤로 보내기
+        goalsList.sort(Comparator.comparing(GoalsDto.getGoalsList::getIsExpired));
 
         return goalsList;
     }
