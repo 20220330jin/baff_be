@@ -67,4 +67,28 @@ public class InquiryRepositoryImpl extends QuerydslRepositorySupport implements 
                 .orderBy(inquiry.regDateTime.desc())
                 .fetch();
     }
+
+    @Override
+    public InquiryDto.getInquiryList getInquiryDetail(Long userId, Long inquiryId) {
+        BooleanExpression isUserId = inquiry.user.id.eq(userId);
+        BooleanExpression isDelYn = inquiry.delYn.eq('N');
+        BooleanExpression isInquiryId = inquiry.id.eq(inquiryId);
+
+        return jpaQueryFactory
+                .select(Projections.constructor(InquiryDto.getInquiryList.class,
+                                inquiry.id,
+                                inquiry.title,
+                                inquiry.content,
+                                inquiry.inquiryType,
+                                inquiry.status,
+                                inquiry.regDateTime
+                        ))
+                .from(inquiry)
+                .where(
+                        isDelYn,
+                        isUserId,
+                        isInquiryId
+                )
+                .fetchFirst();
+    }
 }

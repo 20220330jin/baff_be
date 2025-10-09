@@ -24,4 +24,9 @@ public class InquiryRestController {
     public List<InquiryDto.getInquiryList> getInquiryList(@ModelAttribute InquiryVO.getInquiryListParam param, @AuthenticationPrincipal String socialId) {
         return inquiryService.getInquiryList(param, socialId);
     }
+
+    @GetMapping("/getInquiryDetail/{inquiryId}")
+    public InquiryDto.getInquiryList getInquiryDetail(@PathVariable Long inquiryId, @AuthenticationPrincipal String socialId) {
+        return inquiryService.getInquiryDetail(inquiryId, socialId);
+    }
 }

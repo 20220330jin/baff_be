@@ -45,4 +45,10 @@ public class InquiryServiceImpl implements InquiryService{
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
         return inquiryRepository.getInquiryList(param, user.getId());
     }
+
+    @Override
+    public InquiryDto.getInquiryList getInquiryDetail(Long inquiryId, String socialId) {
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        return inquiryRepository.getInquiryDetail(user.getId(), inquiryId);
+    }
 }

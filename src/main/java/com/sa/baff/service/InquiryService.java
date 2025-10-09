@@ -10,4 +10,7 @@ public interface InquiryService {
     void createInquiry(InquiryVO.createInquiry param, String socialId);
 
     List<InquiryDto.getInquiryList> getInquiryList(InquiryVO.getInquiryListParam param, String socialId);
+
+    InquiryDto.getInquiryList getInquiryDetail(Long inquiryId, String socialId);
+
 }
