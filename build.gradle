@@ -49,6 +49,8 @@ dependencies {
     implementation 'com.google.oauth-client:google-oauth-client-jetty:1.32.1' // 또는 최신 버전
     implementation 'com.google.code.gson:gson:2.8.9' // GsonFactory 사용 시
 
+    // 통합 어드민 페이지와 async api 통신을 위함
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
 }
 

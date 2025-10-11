@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 public class InquiryServiceImpl implements InquiryService{
     private final UserRepository userRepository;
     private final InquiryRepository inquiryRepository;
+    private final InquiryAsyncService inquiryAsyncService;
 
     @Override
     public void createInquiry(InquiryVO.createInquiry param, String socialId) {
@@ -37,7 +38,9 @@ public class InquiryServiceImpl implements InquiryService{
                 .user(user)
                 .build();
 
-        inquiryRepository.save(inquiry);
+        Inquiry savedInquiry = inquiryRepository.save(inquiry);
+
+        inquiryAsyncService.sendToAdminServer(savedInquiry.getId());
     }
 
     @Override
