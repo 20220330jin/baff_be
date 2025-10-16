@@ -11,6 +11,7 @@ import jakarta.persistence.EntityManager;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Repository
@@ -53,7 +54,7 @@ public class WeightRepositoryImpl extends QuerydslRepositorySupport implements W
                             .from(weight)
                             .where(isDelYn
                                     .and(isUserId)
-                                    .and(weight.recordDate.between(param.getStartDate().atStartOfDay(), param.getEndDate().atStartOfDay())))
+                                    .and(weight.recordDate.between(param.getStartDate().atStartOfDay(), param.getEndDate().atTime(LocalTime.MAX))))
                             .orderBy(weight.recordDate.asc())
                             .fetch();
 

@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -268,11 +269,11 @@ public class BattleServiceImpl implements BattleService {
                             .orElseThrow(() -> new IllegalArgumentException("상대방이 없습니다."));
 
                     // 현재 사용자와 상대방의 최신 체중을 조회 (LocalDate를 LocalDateTime으로 변환하기 위해 atStartOfDay 사용)
-                    Double myCurrentWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, battleRoom.getEndDate().atStartOfDay())
+                    Double myCurrentWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, battleRoom.getEndDate().atTime(LocalTime.MAX))
                             .map(Weight::getWeight)
                             .orElse(participant.getStartingWeight());
 
-                    Double opponentCurrentWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(opponentParticipant.getUser(), battleRoom.getEndDate().atStartOfDay())
+                    Double opponentCurrentWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(opponentParticipant.getUser(), battleRoom.getEndDate().atTime(LocalTime.MAX))
                             .map(Weight::getWeight)
                             .orElse(opponentParticipant.getStartingWeight());
 
@@ -404,11 +405,11 @@ public class BattleServiceImpl implements BattleService {
 
                     // 3. 최종 체중 정보 조회
                     // 배틀의 종료일(endDate)을 기준으로 최종 체중 기록을 가져옵니다.
-                    Double myFinalWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, battleRoom.getEndDate().atStartOfDay())
+                    Double myFinalWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, battleRoom.getEndDate().atTime(LocalTime.MAX))
                             .map(Weight::getWeight)
                             .orElse(participant.getStartingWeight());
 
-                    Double opponentFinalWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(opponentParticipant.getUser(), battleRoom.getEndDate().atStartOfDay())
+                    Double opponentFinalWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(opponentParticipant.getUser(), battleRoom.getEndDate().atTime(LocalTime.MAX))
                             .map(Weight::getWeight)
                             .orElse(opponentParticipant.getStartingWeight());
 
