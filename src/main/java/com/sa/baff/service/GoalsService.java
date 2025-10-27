@@ -31,4 +31,11 @@ public interface GoalsService {
      * @param goalId
      */
     void deleteGoal(Long goalId);
+
+    /**
+     * 리뷰 작성에 이용되는 목표 상세 정보
+     * @param goalId
+     * @return
+     */
+    GoalsDto.getGoalDetail getGoalDetailForReview(Long goalId, String socialId);
 }

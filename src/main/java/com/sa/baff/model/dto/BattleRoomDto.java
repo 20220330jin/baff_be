@@ -2,10 +2,7 @@ package com.sa.baff.model.dto;
 
 import com.sa.baff.util.BattleStatus;
 import com.sa.baff.util.GoalType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -118,5 +115,18 @@ public class BattleRoomDto {
         private GoalType goalType;
         private Double targetValue;
         private boolean isReady;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class getBattleDetailForReview {
+        private Long battleRoomId;
+        private Long durationDays;
+        private Double startWeight;
+        private Double targetWeight;
+        private Double currentWeight;
     }
 }

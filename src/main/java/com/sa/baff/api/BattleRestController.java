@@ -74,4 +74,9 @@ public class BattleRestController {
     public List<BattleRoomDto.getParticipantsList> getParticipantsList(@PathVariable String entryCode) {
         return battleService.getParticipantsList(entryCode);
     }
+
+    @GetMapping("/{entryCode}/getBattleDetailForReview")
+    public BattleRoomDto.getBattleDetailForReview getBattleDetailForReview(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
+        return battleService.getBattleDetailForReview(entryCode, socialId);
+    }
 }

@@ -33,4 +33,23 @@ public class GoalsDto {
         private Double currentWeight;
 
     }
+
+    @Setter
+    @Getter
+    public static class getGoalDetail {
+        /* 목표 ID */
+        private Long goalsId;
+//        /* 목표 기간(시작일) */
+//        private LocalDateTime startDate;
+//        /* 목표 기간(종료일) */
+//        private LocalDateTime endDate;
+        /* 목표 기간 (일수) */
+        private Long durationDays;
+        /* 시작 몸무게 */
+        private Double startWeight;
+        /* 목표 몸무게 */
+        private Double targetWeight;
+        /* 현재 몸무게 */
+        private Double currentWeight;
+    }
 }

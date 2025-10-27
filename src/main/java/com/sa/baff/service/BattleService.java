@@ -85,4 +85,6 @@ public interface BattleService {
      * @return
      */
     List<BattleRoomDto.getParticipantsList> getParticipantsList(String entryCode);
+
+    BattleRoomDto.getBattleDetailForReview getBattleDetailForReview(String entryCode, String socialId);
 }

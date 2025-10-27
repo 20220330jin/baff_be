@@ -47,4 +47,12 @@ public class GoalsRestController {
     public void deleteGoal(@PathVariable Long goalId) {
         goalsService.deleteGoal(goalId);
     }
+
+    /**
+     * 목표 상세 api
+     */
+    @GetMapping("/getGoalDetailForReview/{goalId}")
+    public GoalsDto.getGoalDetail getGoalDetailForReview(@PathVariable Long goalId, @AuthenticationPrincipal String socialId) {
+        return goalsService.getGoalDetailForReview(goalId, socialId);
+    }
 }

@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -484,6 +485,39 @@ public class BattleServiceImpl implements BattleService {
     public List<BattleRoomDto.getParticipantsList> getParticipantsList(String entryCode) {
 
        return battleParticipantRepository.getParticipantsList(entryCode);
+    }
+
+    @Override
+    public BattleRoomDto.getBattleDetailForReview getBattleDetailForReview(String entryCode, String socialId) {
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        BattleRoom battleRoom = battleRoomRepository.findByEntryCode(entryCode)
+                .orElseThrow(() -> new IllegalArgumentException("방을 찾을 수 없습니다."));
+
+        BattleParticipant myParticipant = battleParticipantRepository.findByRoomAndUserAndDelYn(battleRoom, user, 'N')
+                .orElseThrow(() -> new IllegalArgumentException("사용자가 해당 배틀에 참여하고 있지 않습니다."));
+
+        // 3. 최종 체중 기록 조회 (배틀 종료일 포함)
+        LocalDate battleEndDate = battleRoom.getEndDate();
+
+        // 배틀 종료일의 자정(LocalTime.MAX)을 포함한 LocalDateTime을 생성하여,
+        // WeightRepository의 findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc 메서드를 사용합니다.
+        // 이는 종료일 당일의 기록까지 모두 포함하기 위함입니다.
+        LocalDateTime endOfBattleDay = battleEndDate.atStartOfDay().with(LocalTime.MAX);
+
+        // 나의 최종 체중: 배틀 종료일 자정까지 기록된 체중 중 가장 최신 기록을 찾습니다.
+        Double myFinalWeight = weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(user, endOfBattleDay)
+                .map(Weight::getWeight)
+                .orElse(myParticipant.getStartingWeight()); // 기록이 없다면 시작 체중으로 간주
+
+        return BattleRoomDto.getBattleDetailForReview.builder()
+                .battleRoomId(battleRoom.getId()) // 배틀룸 ID
+                .durationDays((long) battleRoom.getDurationDays()) // 전체 진행 기간 (Long 타입 변환)
+                .startWeight(myParticipant.getStartingWeight()) // 시작 체중
+                .targetWeight(myParticipant.getTargetValue()) // 목표값 (감량 kg, % 또는 증량 kg)
+                .currentWeight(myFinalWeight) // 배틀 종료일 기준 최종 체중
+                .build();
     }
 
     /**

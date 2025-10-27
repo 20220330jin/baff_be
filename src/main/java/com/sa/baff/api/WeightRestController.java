@@ -43,8 +43,6 @@ public class WeightRestController {
      */
     @GetMapping("/getBattleWeightHistory")
     public List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(@ModelAttribute WeightVO.getBattleWeightHistoryParam getBattleWeightHistoryParam) {
-        System.out.println( "______________________------- " + getBattleWeightHistoryParam.getUserId());
-
         return weightService.getBattleWeightHistory(getBattleWeightHistoryParam);
     }
 }
