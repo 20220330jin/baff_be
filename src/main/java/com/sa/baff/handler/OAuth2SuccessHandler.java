@@ -42,6 +42,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // 요청이 들어온 서버의 호스트 이름을 기준으로 환경을 구분합니다.
         String serverName = request.getServerName();
+        System.out.println(serverName +"--------------------------------");
         System.out.println("Request Server Name: " + serverName);
 
         String redirectUrl;
