@@ -52,6 +52,10 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             System.out.println("Environment: LOCAL");
             createAndSetCookieForLocal(response, "accessToken", token);
             redirectUrl = "http://localhost:5173/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
+        } else if ("baff-be-ckop.onrender.com".equalsIgnoreCase(serverName)) {
+            System.out.println("Environment: dev");
+            createAndSetCookieForDevelopment(response, "accessToken", token);
+            redirectUrl = "https://baff-fe.vercel.app/user/oauth-response/" + token + "/" + EXPIRATION_TIME_SECONDS;
         } else {
             // --- 배포 환경 (개발/운영) ---
             // 참고: 현재 구조에서는 요청의 호스트 이름만으로는 개발(vercel)과 운영(change-up.me) 프론트엔드를 구분할 수 없습니다.
