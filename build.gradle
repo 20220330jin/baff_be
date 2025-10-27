@@ -52,6 +52,10 @@ dependencies {
     // 통합 어드민 페이지와 async api 통신을 위함
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+    // R2 연동을 위한 AWS SDK v2 (S3 호환)
+    implementation 'software.amazon.awssdk:s3:2.20.16'
+    implementation 'software.amazon.awssdk:url-connection-client:2.20.16'
+
 }
 
 tasks.named('test') {
