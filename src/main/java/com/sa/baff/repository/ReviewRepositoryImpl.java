@@ -116,4 +116,15 @@ public class ReviewRepositoryImpl extends QuerydslRepositorySupport implements R
                         .and(isDelYn))
                 .execute();
     }
+
+    @Override
+    @Transactional
+    public void updateReviewCommentCount(Long reviewId, Long count) {
+        QReview review = QReview.review;
+        System.out.println("------------------" + count);
+        jpaQueryFactory.update(review)
+                .set(review.commentCount, count)
+                .where(review.id.eq(reviewId))
+                .execute();
+    }
 }

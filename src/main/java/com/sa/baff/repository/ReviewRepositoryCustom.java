@@ -10,4 +10,6 @@ public interface ReviewRepositoryCustom {
     Page<ReviewDto.getReviewList> getReviewList(int page, int size, Long userId);
 
     void deleteReview(Long reviewId, Long userId);
+
+    void updateReviewCommentCount(Long reviewId, Long count);
 }

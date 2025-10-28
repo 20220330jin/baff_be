@@ -35,4 +35,10 @@ public class ReviewVO {
         private Long reviewId;
     }
 
+    @Getter
+    public static class deleteComment {
+        private Long commentId;
+        private Long reviewId;
+    }
+
 }

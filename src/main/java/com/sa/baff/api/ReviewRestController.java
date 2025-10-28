@@ -66,9 +66,9 @@ public class ReviewRestController {
         return reviewCommentService.getReviewCommentList(reviewId, socialId);
     }
 
-    @PostMapping("/deleteReviewComment/{commentId}")
-    public void deleteReviewComment(@PathVariable Long commentId, @AuthenticationPrincipal String socialId) {
-        reviewCommentService.deleteReviewComment(commentId, socialId);
+    @PostMapping("/deleteReviewComment")
+    public void deleteReviewComment(@RequestBody ReviewVO.deleteComment param, @AuthenticationPrincipal String socialId) {
+        reviewCommentService.deleteReviewComment(param, socialId);
     }
 
     @PostMapping("/deleteReview/{reviewId}")

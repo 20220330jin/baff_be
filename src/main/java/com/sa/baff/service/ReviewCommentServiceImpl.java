@@ -48,15 +48,19 @@ public class ReviewCommentServiceImpl implements ReviewCommentService {
     }
 
     @Override
-    public void deleteReviewComment(Long commentId, String socialId) {
+    public void deleteReviewComment(ReviewVO.deleteComment param, String socialId) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        reviewCommentRepository.deleteReviewComment(commentId, user.getId());
+        Review review = reviewRepository.findById(param.getReviewId())
+                .orElseThrow(() -> new IllegalArgumentException("리뷰를 찾을 수 없습니다."));
+
+        reviewCommentRepository.deleteReviewComment(param.getCommentId(), user.getId());
+
+        updateReviewCommentCount(review);
     }
 
     private void updateReviewCommentCount(Review review) {
-        Long count = reviewCommentRepository.countByReview(review);
-        review.setCommentCount(count);
-        reviewRepository.save(review);
+        Long count = reviewCommentRepository.countByReviewAndDelYn(review, 'N');
+        reviewRepository.updateReviewCommentCount(review.getId(), count);
     }
 }

@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReviewCommentRepository extends JpaRepository<ReviewComment, Long>, ReviewCommentRepositoryCustom {
 
-    long countByReview(Review review);
+    Long countByReviewAndDelYn(Review review, Character delYn);
 }
