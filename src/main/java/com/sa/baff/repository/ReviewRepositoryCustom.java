@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface ReviewRepositoryCustom {
 
-    Page<ReviewDto.getReviewList> getReviewList(int page, int size, Long userId);
+    Page<ReviewDto.getReviewList> getReviewList(int page, int size, Long userId, String category);
 
     void deleteReview(Long reviewId, Long userId);
 

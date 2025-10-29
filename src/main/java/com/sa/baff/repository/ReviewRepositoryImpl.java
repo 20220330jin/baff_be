@@ -1,8 +1,10 @@
 package com.sa.baff.repository;
 
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.NumberPath;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -34,12 +36,14 @@ public class ReviewRepositoryImpl extends QuerydslRepositorySupport implements R
     }
 
     @Override
-    public Page<ReviewDto.getReviewList> getReviewList(int page, int size, Long userId) {
+    public Page<ReviewDto.getReviewList> getReviewList(int page, int size, Long userId, String category) {
         QReview review = QReview.review;
         QUserB user = QUserB.userB;
         QReviewLike reviewLike = QReviewLike.reviewLike;
 
         BooleanExpression isDelYn = review.delYn.eq('N');
+        BooleanExpression myReviewCategory = category.equals("myReview") ? review.user.id.eq(userId) : null;
+        OrderSpecifier popularCategory = category.equals("popular") ? review.likes.desc() : review.regDateTime.desc();
 
         JPQLQuery<Long> isLikedExistsQuery = JPAExpressions.select(reviewLike.id.count())
                 .from(reviewLike)
@@ -92,8 +96,8 @@ public class ReviewRepositoryImpl extends QuerydslRepositorySupport implements R
                 ))
                 .from(review)
                 .join(review.user, user) // 닉네임 조회를 위해 User와 JOIN
-                .where(isDelYn)
-                .orderBy(review.regDateTime.desc())
+                .where(isDelYn, myReviewCategory)
+                .orderBy(popularCategory)
                 .offset((long) page * size)
                 .limit(size)
                 .fetch();

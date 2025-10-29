@@ -8,7 +8,7 @@ import java.util.List;
 public interface ReviewService {
     void createReview(ReviewVO.createReview createReviewParam, String socialId);
 
-    ReviewDto.ReviewListResponse getReviewList(String socialId, int page, int size);
+    ReviewDto.ReviewListResponse getReviewList(String socialId, int page, int size, String category);
 
     void deleteReview(Long reviewId, String socialId);
 }

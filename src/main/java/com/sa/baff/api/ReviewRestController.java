@@ -46,9 +46,10 @@ public class ReviewRestController {
     public ReviewDto.ReviewListResponse getReviewList(
             @AuthenticationPrincipal String socialId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam String category
     ) {
-        return reviewService.getReviewList(socialId, page, size);
+        return reviewService.getReviewList(socialId, page, size, category);
     }
 
     @PostMapping("/toggleReviewLike/{reviewId}")

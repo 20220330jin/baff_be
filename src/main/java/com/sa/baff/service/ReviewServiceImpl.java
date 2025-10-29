@@ -52,10 +52,10 @@ public class ReviewServiceImpl implements ReviewService{
     }
 
     @Override
-    public ReviewDto.ReviewListResponse getReviewList(String socialId, int page, int size) {
+    public ReviewDto.ReviewListResponse getReviewList(String socialId, int page, int size, String category) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        Page<ReviewDto.getReviewList> reviewPage = reviewRepository.getReviewList(page, size, user.getId());
+        Page<ReviewDto.getReviewList> reviewPage = reviewRepository.getReviewList(page, size, user.getId(), category);
 
         return new ReviewDto.ReviewListResponse(reviewPage);
     }
