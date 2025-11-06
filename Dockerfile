@@ -22,7 +22,7 @@ COPY --chown=gradle:gradle src /app/src
 
 RUN ./gradlew build -x test --no-daemon --no-build-cache
 
-FROM openjdk:17.0-jdk-slim-bullseye
+FROM openjdk:17.0.2-jdk-slim
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
