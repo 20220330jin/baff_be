@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -53,9 +54,24 @@ public class ReviewServiceImpl implements ReviewService{
 
     @Override
     public ReviewDto.ReviewListResponse getReviewList(String socialId, int page, int size, String category) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        // socialId가 유효하지 않은 경우(비로그인 시)를 고려하여 Optional.empty()로 시작
+        Optional<UserB> userOptional = Optional.empty();
 
-        Page<ReviewDto.getReviewList> reviewPage = reviewRepository.getReviewList(page, size, user.getId(), category);
+        // socialId가 있을 때만 DB 조회를 시도
+        if (socialId != null && !socialId.isEmpty()) {
+            userOptional = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N');
+        }
+
+        // ⭐️ 핵심 수정 부분:
+        // userOptional이 비어있으면 UserB.createNonExistingUser() (ID=0)를 반환합니다.
+        UserB user = userOptional
+                .orElse(UserB.createNonExistingUser());
+
+        // user.getId()는 로그인 시 실제 ID, 비로그인 시 0L을 반환합니다.
+        Long userId = user.getId();
+
+        // Repository 메서드는 이제 userId가 0L인 경우(비로그인)를 안전하게 처리해야 합니다.
+        Page<ReviewDto.getReviewList> reviewPage = reviewRepository.getReviewList(page, size, userId, category);
 
         return new ReviewDto.ReviewListResponse(reviewPage);
     }

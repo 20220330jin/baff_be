@@ -63,4 +63,10 @@ public class UserB extends BaseEntity {
         this.provider = provider;
         this.platform = platform;
     }
+
+    public static UserB createNonExistingUser() {
+        UserB user = new UserB();
+        user.id = 0L; // ID를 0으로 설정
+        return user;
+    }
 }

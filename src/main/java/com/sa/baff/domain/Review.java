@@ -58,9 +58,11 @@ public class Review extends BaseEntity {
 
     private Long goalId;
 
-    private Long likes;
+    @Column(columnDefinition = "BIGINT DEFAULT 0")
+    private Long likes = 0L;
 
-    private Long commentCount;
+    @Column(columnDefinition = "BIGINT DEFAULT 0")
+    private Long commentCount = 0L;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userId")

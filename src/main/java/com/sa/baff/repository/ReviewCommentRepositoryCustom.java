@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface ReviewCommentRepositoryCustom {
 
-    List<ReviewDto.getReviewCommentList> getReviewCommentList(UserB user, Long reviewId);
+    List<ReviewDto.getReviewCommentList> getReviewCommentList(Long reviewId);
 
     void deleteReviewComment(Long commentId, Long userId);
 }

@@ -27,7 +27,7 @@ public class ReviewCommentRepositoryImpl extends QuerydslRepositorySupport imple
     }
 
     @Override
-    public List<ReviewDto.getReviewCommentList> getReviewCommentList(UserB user, Long reviewId) {
+    public List<ReviewDto.getReviewCommentList> getReviewCommentList(Long reviewId) {
         QReviewComment reviewComment = QReviewComment.reviewComment;
         BooleanExpression isDelYn = reviewComment.delYn.eq('N');
 

@@ -97,7 +97,7 @@ public class ReviewRepositoryImpl extends QuerydslRepositorySupport implements R
                 .from(review)
                 .join(review.user, user) // 닉네임 조회를 위해 User와 JOIN
                 .where(isDelYn, myReviewCategory)
-                .orderBy(popularCategory)
+                .orderBy(popularCategory, review.regDateTime.desc())
                 .offset((long) page * size)
                 .limit(size)
                 .fetch();

@@ -42,9 +42,7 @@ public class ReviewCommentServiceImpl implements ReviewCommentService {
 
     @Override
     public List<ReviewDto.getReviewCommentList> getReviewCommentList(Long reviewId, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-        return reviewCommentRepository.getReviewCommentList(user, reviewId);
+        return reviewCommentRepository.getReviewCommentList(reviewId);
     }
 
     @Override
