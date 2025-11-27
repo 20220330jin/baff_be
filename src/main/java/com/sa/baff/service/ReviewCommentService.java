@@ -12,4 +12,6 @@ public interface ReviewCommentService {
     List<ReviewDto.getReviewCommentList> getReviewCommentList(Long reviewId, String socialId);
 
     void deleteReviewComment(ReviewVO.deleteComment param, String socialId);
+
+    void editReviewComment(ReviewVO.editReviewComment param, String socialId);
 }

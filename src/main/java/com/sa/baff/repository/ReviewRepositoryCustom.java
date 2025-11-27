@@ -1,9 +1,8 @@
 package com.sa.baff.repository;
 
 import com.sa.baff.model.dto.ReviewDto;
+import com.sa.baff.model.vo.ReviewVO;
 import org.springframework.data.domain.Page;
-
-import java.util.List;
 
 public interface ReviewRepositoryCustom {
 

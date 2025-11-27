@@ -2,6 +2,8 @@ package com.sa.baff.api;
 
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
+import com.sa.baff.model.vo.UserVO;
+import com.sa.baff.service.R2Service;
 import com.sa.baff.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -9,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -23,6 +26,7 @@ import java.util.List;
 public class UserRestController {
 
     private final UserService userService;
+    private final R2Service r2Service;
 
     @GetMapping("/cron")
     public void cron() {
@@ -78,4 +82,25 @@ public class UserRestController {
     public void withdrawal(@AuthenticationPrincipal String socialId) {
         userService.withdrawal(socialId);
     }
+
+    @PostMapping("/uploadProfileImage")
+    public ResponseEntity<String> uploadImages(@RequestParam("images")MultipartFile file) {
+        if(file == null) {
+            throw new IllegalArgumentException("이미지는 1장까지 업로드할 수 있습니다.");
+        }
+        String imageUrl = r2Service.uploadSingleFile(file);
+
+        return ResponseEntity.ok(imageUrl);
+    }
+
+    @PostMapping("/editProfileImage")
+    public void editProfileImage(@AuthenticationPrincipal String socialId, @RequestBody UserVO.editProfileImage param) {
+        userService.editProfileImage(socialId, param);
+    }
+
+    @PostMapping("/editNickname")
+    public UserDto.editNicknameStatus editNickname(@AuthenticationPrincipal String socialId, @RequestBody UserVO.editNicknameRequest param) {
+        return userService.editNickname(socialId, param);
+    }
+
 }

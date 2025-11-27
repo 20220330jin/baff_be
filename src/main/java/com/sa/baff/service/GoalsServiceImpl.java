@@ -149,6 +149,7 @@ public class GoalsServiceImpl implements GoalsService {
 
         // 목표 정보 매핑
         dto.setGoalsId(goal.getId());
+        dto.setTitle(goal.getTitle());
         dto.setDurationDays(durationDays);
         dto.setStartWeight(goal.getStartWeight()); // 목표 시작 시의 체중
         dto.setTargetWeight(goal.getTargetWeight()); // 목표 체중

@@ -58,6 +58,9 @@ public class Review extends BaseEntity {
 
     private Long goalId;
 
+    @Column(name = "is_public")
+    private boolean isPublic = false;
+
     @Column(columnDefinition = "BIGINT DEFAULT 0")
     private Long likes = 0L;
 
@@ -71,7 +74,7 @@ public class Review extends BaseEntity {
     @Builder
     public Review(String title, String dietMethods,String difficulty, Double startWeight, Double targetWeight, Integer period,String question_hardest_period, String question_diet_management, String question_exercise,
                   String question_effective_method, String question_recommend_target, String content, String imageUrl1, String imageUrl2, boolean isWeightPrivate,
-                  String reviewType, String battleRoomEntryCode, Long goalId, UserB user) {
+                  String reviewType, String battleRoomEntryCode, Long goalId, boolean isPublic, UserB user) {
         this.title = title;
         this.dietMethods = dietMethods;
         this.difficulty = difficulty;
@@ -90,6 +93,7 @@ public class Review extends BaseEntity {
         this.reviewType = reviewType;
         this.battleRoomEntryCode = battleRoomEntryCode;
         this.goalId = goalId;
+        this.isPublic = isPublic;
         this.user = user;
     }
 }

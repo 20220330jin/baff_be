@@ -3,6 +3,7 @@ package com.sa.baff.service;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
+import com.sa.baff.model.vo.UserVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
@@ -36,4 +37,8 @@ public interface UserService {
     UserB findOrCreateSocialUser(String socialId, String email, String name, String profileUrl, String provider);
 
     void withdrawal(String socialId);
+
+    void editProfileImage(String socialId, UserVO.editProfileImage param);
+
+    UserDto.editNicknameStatus editNickname(String socialId, UserVO.editNicknameRequest param);
 }

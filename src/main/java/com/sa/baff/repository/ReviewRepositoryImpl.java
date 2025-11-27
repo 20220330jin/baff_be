@@ -13,6 +13,7 @@ import com.sa.baff.domain.QReviewLike;
 import com.sa.baff.domain.QUserB;
 import com.sa.baff.domain.Review;
 import com.sa.baff.model.dto.ReviewDto;
+import com.sa.baff.model.vo.ReviewVO;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.domain.Page;
@@ -84,11 +85,13 @@ public class ReviewRepositoryImpl extends QuerydslRepositorySupport implements R
                         review.regDateTime,
                         review.user.id,
                         review.user.nickname,
+                        review.user.profileImageUrl,
                         review.reviewType,
                         review.battleRoomEntryCode,
                         review.goalId,
                         review.likes,
                         review.commentCount,
+                        review.isPublic,
                         new CaseBuilder()
                                 .when(isLikedExistsQuery.exists())
                                 .then(true)

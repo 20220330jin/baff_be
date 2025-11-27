@@ -3,6 +3,7 @@ package com.sa.baff.service;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
+import com.sa.baff.model.vo.UserVO;
 import com.sa.baff.repository.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -123,6 +124,22 @@ public class UserServiceImpl implements UserService {
         UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         userRepository.withdrawal(user.getId());
+    }
+
+    @Override
+    @Transactional
+    public void editProfileImage(String socialId, UserVO.editProfileImage param) {
+        UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        userRepository.editProfileImage(user.getId(), param);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public UserDto.editNicknameStatus editNickname(String socialId, UserVO.editNicknameRequest param) {
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return userRepository.editNickname(user.getId(), param.getNickname());
     }
 
     private String determineCookieDomain(HttpServletRequest request) {

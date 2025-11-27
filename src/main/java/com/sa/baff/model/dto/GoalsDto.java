@@ -51,5 +51,6 @@ public class GoalsDto {
         private Double targetWeight;
         /* 현재 몸무게 */
         private Double currentWeight;
+        private String title;
     }
 }

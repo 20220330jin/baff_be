@@ -16,7 +16,11 @@ public interface UserRepository extends CrudRepository<UserB, Long>, UserReposit
 
     List<UserB> findAllByIdIn(List<Long> ids);
 
+    Optional<UserB> findUserIdById(Long id);
+
     Optional<UserB> findBySocialId(String socialId);
 
     Iterable<UserB> findAllByOrderByRegDateTimeDesc();
+
+    long countBynicknameStartingWith(String prefix);
 }

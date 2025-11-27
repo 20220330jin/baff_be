@@ -1,5 +1,6 @@
 package com.sa.baff.api;
 
+import com.sa.baff.model.dto.GoalsDto;
 import com.sa.baff.model.dto.ReviewDto;
 import com.sa.baff.model.vo.ReviewVO;
 import com.sa.baff.service.R2Service;
@@ -38,7 +39,6 @@ public class ReviewRestController {
 
     @PostMapping("/createReview")
     public void createReview(@RequestBody ReviewVO.createReview createReviewParam, @AuthenticationPrincipal String socialId) {
-        System.out.println("--------------------" + createReviewParam);
         reviewService.createReview(createReviewParam, socialId);
     }
 
@@ -75,5 +75,25 @@ public class ReviewRestController {
     @PostMapping("/deleteReview/{reviewId}")
     public void deleteReview(@PathVariable Long reviewId, @AuthenticationPrincipal String socialId) {
         reviewService.deleteReview(reviewId, socialId);
+    }
+
+    @GetMapping("/getBattleDataForReview")
+    public ReviewDto.getBattleDataForReview getBattleDataForReview(@ModelAttribute ReviewVO.getBattleDataForReview param) {
+        return reviewService.getBattleDataForReview(param);
+    }
+
+    @GetMapping("/getGoalDataForReview")
+    public GoalsDto.getGoalDetail getGoalDataForReview(@ModelAttribute ReviewVO.getGoalDataForReview param) {
+        return reviewService.getGoalDataForReview(param);
+    }
+
+    @PostMapping("/editReviewComment")
+    public void editReviewComment(@RequestBody ReviewVO.editReviewComment param, @AuthenticationPrincipal String socialId) {
+        reviewCommentService.editReviewComment(param, socialId);
+    }
+
+    @PostMapping("/editReview/{reviewId}")
+    public void editReview(@RequestBody ReviewVO.createReview param, @AuthenticationPrincipal String socialId, @PathVariable Long reviewId) {
+        reviewService.editReview(param, socialId, reviewId);
     }
 }

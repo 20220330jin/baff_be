@@ -7,6 +7,7 @@ import com.sa.baff.domain.QReviewComment;
 import com.sa.baff.domain.ReviewComment;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.ReviewDto;
+import com.sa.baff.model.vo.ReviewVO;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.EntityManager;
 import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
@@ -58,6 +59,21 @@ public class ReviewCommentRepositoryImpl extends QuerydslRepositorySupport imple
                 .set(reviewComment.modDateTime, DateTimeUtils.now())
                 .where(reviewComment.id.eq(commentId)
                         .and(isUser))
+                .execute();
+    }
+
+    @Override
+    @Transactional
+    public void editReviewComment(Long userId, ReviewVO.editReviewComment param) {
+        QReviewComment reviewComment = QReviewComment.reviewComment;
+
+        BooleanExpression isUser = reviewComment.user.id.eq(userId);
+            
+        jpaQueryFactory.update(reviewComment)
+                .set(reviewComment.content, param.getContent())
+                .set(reviewComment.modDateTime, DateTimeUtils.now())
+                .where(isUser
+                        .and(reviewComment.id.eq(param.getCommentId())))
                 .execute();
     }
 }

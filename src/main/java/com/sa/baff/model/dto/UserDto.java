@@ -1,10 +1,9 @@
 package com.sa.baff.model.dto;
 
+import com.sa.baff.domain.EditNicknameStatus;
 import com.sa.baff.domain.Role;
 import com.sa.baff.domain.UserB;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
 @NoArgsConstructor
@@ -26,5 +25,11 @@ public class UserDto {
             user.getRole(),
             user.getHeight()
         );
+    }
+
+    @Setter
+    @Getter
+    public static class editNicknameStatus {
+        private EditNicknameStatus status;
     }
 }

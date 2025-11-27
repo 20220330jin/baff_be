@@ -2,6 +2,8 @@ package com.sa.baff.model.vo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 public class ReviewVO {
 
@@ -27,6 +29,8 @@ public class ReviewVO {
         private String reviewType;
         private String battleRoomEntryCode;
         private Long goalId;
+        @JsonProperty("isPublic")
+        private boolean isPublic;
     }
 
     @Getter
@@ -39,6 +43,30 @@ public class ReviewVO {
     public static class deleteComment {
         private Long commentId;
         private Long reviewId;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class getBattleDataForReview {
+        private String entryCode;
+        private Long hostId;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class getGoalDataForReview {
+        private Long goalId;
+        private Long userId;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    public static class editReviewComment {
+        private Long commentId;
+        private String content;
     }
 
 }

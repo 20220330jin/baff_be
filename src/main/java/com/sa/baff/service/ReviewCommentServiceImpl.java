@@ -57,6 +57,13 @@ public class ReviewCommentServiceImpl implements ReviewCommentService {
         updateReviewCommentCount(review);
     }
 
+    @Override
+    public void editReviewComment(ReviewVO.editReviewComment param, String socialId) {
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        reviewCommentRepository.editReviewComment(user.getId(), param);
+    }
+
     private void updateReviewCommentCount(Review review) {
         Long count = reviewCommentRepository.countByReviewAndDelYn(review, 'N');
         reviewRepository.updateReviewCommentCount(review.getId(), count);

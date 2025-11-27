@@ -1,7 +1,9 @@
 package com.sa.baff.model.dto;
 
+import com.sa.baff.util.GoalType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Page;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,11 +31,13 @@ public class ReviewDto {
         private LocalDateTime regDateTime;
         private Long userId;
         private String userNickName;
+        private String userProfileImage;
         private String reviewType;
         private String battleRoomEntryCode;
         private Long goalId;
         private Long likes;
         private Long commentCount;
+        private boolean isPublic;
         private boolean isLiked;
 
         public getReviewList(Long reviewId, String title, String dietMethods, String difficulty,
@@ -42,8 +46,8 @@ public class ReviewDto {
                              String question_exercise, String question_effective_method,
                              String question_recommend_target, String content,
                              String imageUrl1, String imageUrl2, boolean isWeightPrivate,
-                             LocalDateTime regDateTime, Long userId, String userNickName,
-                             String reviewType, String battleRoomEntryCode, Long goalId, Long likes, Long commentCount, boolean isLiked) {
+                             LocalDateTime regDateTime, Long userId, String userNickName, String userProfileImage,
+                             String reviewType, String battleRoomEntryCode, Long goalId, Long likes, Long commentCount, boolean isPublic, boolean isLiked) {
             this.reviewId = reviewId;
             this.title = title;
             this.dietMethods = dietMethods;
@@ -63,11 +67,13 @@ public class ReviewDto {
             this.regDateTime = regDateTime;
             this.userId = userId;
             this.userNickName = userNickName;
+            this.userProfileImage = userProfileImage;
             this.reviewType = reviewType;
             this.battleRoomEntryCode = battleRoomEntryCode;
             this.goalId = goalId;
             this.likes = likes;
             this.commentCount = commentCount;
+            this.isPublic = isPublic;
             this.isLiked = isLiked;
         }
     }
@@ -114,6 +120,25 @@ public class ReviewDto {
             this.userNickName = userNickName;
             this.content = content;
             this.regDateTime = regDateTime;
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    public static class getBattleDataForReview {
+        // 작성자의 변화량, 상대 감량, 기간, 작성자의 목표량
+        private Double hostWeightChange;
+        private Double opponentWeightChange;
+        private Long durationDays;
+        private Double hostTargetWeight;
+        private GoalType hostGoalType;
+
+        public getBattleDataForReview(Double hostWeightChange, Double opponentWeightChange, Long durationDays, Double hostTargetWeight, GoalType hostGoalType) {
+            this.hostWeightChange = hostWeightChange;
+            this.opponentWeightChange = opponentWeightChange;
+            this.durationDays = durationDays;
+            this.hostTargetWeight = hostTargetWeight;
+            this.hostGoalType = hostGoalType;
         }
     }
 }
