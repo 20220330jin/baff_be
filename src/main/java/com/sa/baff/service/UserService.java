@@ -41,4 +41,8 @@ public interface UserService {
     void editProfileImage(String socialId, UserVO.editProfileImage param);
 
     UserDto.editNicknameStatus editNickname(String socialId, UserVO.editNicknameRequest param);
+
+    List<UserDto.getUserFlagForPopUp> getUserFlagForPopUp(String socialId);
+
+    void insertUserFlag(String socialId, String userFlag);
 }

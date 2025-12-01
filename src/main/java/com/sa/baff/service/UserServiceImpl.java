@@ -1,6 +1,7 @@
 package com.sa.baff.service;
 
 import com.sa.baff.domain.UserB;
+import com.sa.baff.domain.UserFlag;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.model.vo.UserVO;
@@ -24,6 +25,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final UserFlagRepository userFlagRepository;
 
     @Override
     public UserDto getUserInfo(String userId) {
@@ -135,11 +137,30 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional
+    @Transactional
     public UserDto.editNicknameStatus editNickname(String socialId, UserVO.editNicknameRequest param) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         return userRepository.editNickname(user.getId(), param.getNickname());
+    }
+
+    @Override
+    public List<UserDto.getUserFlagForPopUp> getUserFlagForPopUp(String socialId) {
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        return userFlagRepository.getUserFlagForPopUp(user.getId());
+    }
+
+    @Override
+    public void insertUserFlag(String socialId, String userFlag) {
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        UserFlag userFlag1 = new UserFlag();
+
+        userFlag1.setFlagKey(userFlag);
+        userFlag1.setUser(user);
+
+        userFlagRepository.save(userFlag1);
     }
 
     private String determineCookieDomain(HttpServletRequest request) {

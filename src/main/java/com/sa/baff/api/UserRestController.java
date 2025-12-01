@@ -103,4 +103,14 @@ public class UserRestController {
         return userService.editNickname(socialId, param);
     }
 
+    @GetMapping("/getUserFlagForPopUp")
+    public List<UserDto.getUserFlagForPopUp> getUserFlagForPopUp(@AuthenticationPrincipal String socialId) {
+        return userService.getUserFlagForPopUp(socialId);
+    }
+
+    @PostMapping("/insertUserFlag")
+    public void insertUserFlag(@AuthenticationPrincipal String socialId, @RequestBody String flagKey) {
+        userService.insertUserFlag(socialId, flagKey);
+    }
+
 }

@@ -5,6 +5,8 @@ import com.sa.baff.domain.Role;
 import com.sa.baff.domain.UserB;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,6 +17,7 @@ public class UserDto {
     private String profileImage;
     private Role role;
     private Double height;
+    private LocalDateTime regDateTime;
 
     public static UserDto from(UserB user) {
         return new UserDto(
@@ -23,7 +26,8 @@ public class UserDto {
             user.getNickname(),
             user.getProfileImageUrl(),
             user.getRole(),
-            user.getHeight()
+            user.getHeight(),
+            user.getRegDateTime()
         );
     }
 
@@ -31,5 +35,13 @@ public class UserDto {
     @Getter
     public static class editNicknameStatus {
         private EditNicknameStatus status;
+    }
+
+    @Getter
+    @AllArgsConstructor
+    public static class getUserFlagForPopUp {
+        private Long userId;
+        private String flagKey;
+        private LocalDateTime regDateTime;
     }
 }

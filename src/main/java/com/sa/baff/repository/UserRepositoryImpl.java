@@ -115,4 +115,5 @@ public class UserRepositoryImpl extends QuerydslRepositorySupport implements Use
 
         return response;
     }
+
 }
