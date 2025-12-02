@@ -109,8 +109,8 @@ public class UserRestController {
     }
 
     @PostMapping("/insertUserFlag")
-    public void insertUserFlag(@AuthenticationPrincipal String socialId, @RequestBody String flagKey) {
-        userService.insertUserFlag(socialId, flagKey);
+    public void insertUserFlag(@AuthenticationPrincipal String socialId, @RequestBody UserVO.insertUserFlag insertUserFlag) {
+        userService.insertUserFlag(socialId, insertUserFlag);
     }
 
 }

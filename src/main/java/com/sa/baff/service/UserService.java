@@ -44,5 +44,5 @@ public interface UserService {
 
     List<UserDto.getUserFlagForPopUp> getUserFlagForPopUp(String socialId);
 
-    void insertUserFlag(String socialId, String userFlag);
+    void insertUserFlag(String socialId, UserVO.insertUserFlag userFlag);
 }

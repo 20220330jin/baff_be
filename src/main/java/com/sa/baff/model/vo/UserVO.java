@@ -16,4 +16,10 @@ public class UserVO {
     public static class editProfileImage {
         private String imageUrl;
     }
+
+    @Getter
+    @NoArgsConstructor
+    public static class insertUserFlag {
+        private String flagKey;
+    }
 }

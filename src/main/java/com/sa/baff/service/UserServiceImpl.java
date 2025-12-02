@@ -152,12 +152,12 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public void insertUserFlag(String socialId, String userFlag) {
+    public void insertUserFlag(String socialId, UserVO.insertUserFlag userFlag) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UserFlag userFlag1 = new UserFlag();
 
-        userFlag1.setFlagKey(userFlag);
+        userFlag1.setFlagKey(userFlag.getFlagKey());
         userFlag1.setUser(user);
 
         userFlagRepository.save(userFlag1);
