@@ -1,9 +1,11 @@
 package com.sa.baff.service;
 
+import com.sa.baff.domain.Goals;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.WeightDto;
 import com.sa.baff.model.vo.WeightVO;
+import com.sa.baff.repository.GoalsRepository;
 import com.sa.baff.repository.UserRepository;
 import com.sa.baff.repository.WeightRepository;
 import jakarta.transaction.Transactional;
@@ -25,6 +27,7 @@ public class WeightServiceImpl implements WeightService {
 
     private final WeightRepository weightRepository;
     private final UserRepository userRepository;
+    private final GoalsRepository goalsRepository;
 
     @Override
     public void recordWeight(WeightVO.recordWeight recordWeightParam, String socialId) {
@@ -37,12 +40,20 @@ public class WeightServiceImpl implements WeightService {
         // 해당 날짜 범위에 이미 기록이 있는지 확인
         Optional<Weight> existingWeight = weightRepository.findByUserAndRecordDateBetween(user, startOfDay, endOfDay);
 
+
         if (existingWeight.isPresent()) {
             Weight weightToUpdate = existingWeight.get();
             weightToUpdate.setWeight(recordWeightParam.getWeight());
             weightToUpdate.setRecordDate(recordWeightParam.getRecordDate());
             weightRepository.save(weightToUpdate);
         } else {
+            if(user.getId() == 78L) {
+                Goals goals = goalsRepository.findFor78(78L);
+                if(goals.getStartWeight() == 0) {
+                    goalsRepository.updateFor78(78L, recordWeightParam.getWeight());
+                }
+            }
+
             // 기존 기록이 없다면, 새로운 엔티티를 생성합니다.
             Weight newWeight = Weight.builder()
                     .user(user)

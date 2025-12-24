@@ -37,4 +37,25 @@ public class GoalsRepositoryImpl extends QuerydslRepositorySupport implements Go
                 .where(goals.id.eq(goalId))
                 .execute();
     }
+
+    @Override
+    public Goals findFor78(long l) {
+        QGoals goals = QGoals.goals;
+        return jpaQueryFactory.select(
+                goals
+        )
+                .from(goals)
+                .where(goals.user.id.eq(l))
+                .fetchFirst();
+    }
+
+    @Override
+    public void updateFor78(long l, Double d) {
+        QGoals goals = QGoals.goals;
+
+        jpaQueryFactory.update(goals)
+                .set(goals.startWeight, d)
+                .where(goals.user.id.eq(l))
+                .execute();
+    }
 }
