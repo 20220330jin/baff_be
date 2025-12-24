@@ -59,4 +59,23 @@ public class WeightDto {
             this.recordDate = recordDate;
         }
     }
+
+    @Getter
+    @Setter
+    public static class testWeight {
+        private Long weightId;
+        private LocalDateTime regDateTime;
+        private Double weight;
+        private String userName;
+        private Long userId;
+
+        public testWeight(Long weightId, LocalDateTime regDateTime,
+                          Double weight, String userName, Long userId) {
+            this.weightId = weightId;
+            this.regDateTime = regDateTime;
+            this.weight = weight;
+            this.userName = userName;
+            this.userId = userId;
+        }
+    }
 }

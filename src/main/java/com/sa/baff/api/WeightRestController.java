@@ -1,5 +1,6 @@
 package com.sa.baff.api;
 
+import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.WeightDto;
 import com.sa.baff.model.vo.WeightVO;
 import com.sa.baff.service.WeightService;
@@ -45,5 +46,12 @@ public class WeightRestController {
     public List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(@ModelAttribute WeightVO.getBattleWeightHistoryParam getBattleWeightHistoryParam) {
         return weightService.getBattleWeightHistory(getBattleWeightHistoryParam);
     }
+
+    @GetMapping("/testWeightList")
+    public List<WeightDto.testWeight> test () {
+        List<WeightDto.testWeight> tmp = weightService.test();
+        return tmp;
+    }
+
 }
 

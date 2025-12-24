@@ -111,4 +111,11 @@ public class WeightServiceImpl implements WeightService {
 
         return getBattleWeightHistory;
     }
+
+    @Override
+    public List<WeightDto.testWeight> test() {
+        List<WeightDto.testWeight> tmp = weightRepository.test();
+
+        return tmp;
+    }
 }

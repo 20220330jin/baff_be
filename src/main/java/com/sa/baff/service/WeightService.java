@@ -1,8 +1,8 @@
 package com.sa.baff.service;
 
+import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.WeightDto;
 import com.sa.baff.model.vo.WeightVO;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.List;
 
@@ -23,4 +23,6 @@ public interface WeightService {
     WeightDto.getCurrentWeight getCurrentWeight(String socialId);
 
     List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(WeightVO.getBattleWeightHistoryParam getBattleWeightHistoryParam);
+
+    List<WeightDto.testWeight> test();
 }

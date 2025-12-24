@@ -3,6 +3,7 @@ package com.sa.baff.repository;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.sa.baff.domain.QUserB;
 import com.sa.baff.domain.QWeight;
 import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.WeightDto;
@@ -58,5 +59,23 @@ public class WeightRepositoryImpl extends QuerydslRepositorySupport implements W
                             .orderBy(weight.recordDate.asc())
                             .fetch();
 
+    }
+
+    @Override
+    public List<WeightDto.testWeight> test() {
+        QWeight weight = QWeight.weight1;
+        QUserB userB = QUserB.userB;
+
+        return jpaQueryFactory.select(Projections.constructor(WeightDto.testWeight.class,
+                weight.id,
+                weight.regDateTime,
+                weight.weight,
+                userB.nickname,
+                userB.id
+                ))
+                .from(weight)
+                .join(userB)
+                .on(weight.user.id.eq(userB.id))
+                .fetch();
     }
 }
