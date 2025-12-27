@@ -124,12 +124,13 @@ public class BattleServiceImpl implements BattleService {
         }
 
         // 4. 최대 인원수 확인
-        if (battleRoom.getParticipants().size() >= battleRoom.getMaxParticipants()) {
+        long activeParticipantsCount = battleParticipantRepository.findAllByRoomAndDelYn(battleRoom, 'N').size();
+        if (activeParticipantsCount >= battleRoom.getMaxParticipants()) {
             throw new IllegalStateException("방의 최대 인원이 초과되었습니다.");
         }
 
-        // 5. 중복 참여 방지
-        Optional<BattleParticipant> existingParticipant = battleParticipantRepository.findByRoomAndUser(battleRoom, user);
+        // 5. 중복 참여 방지 (활성 참가자만 체크)
+        Optional<BattleParticipant> existingParticipant = battleParticipantRepository.findByRoomAndUserAndDelYn(battleRoom, user, 'N');
         if (existingParticipant.isPresent()) {
             throw new IllegalStateException("이미 참가한 방입니다.");
         }
