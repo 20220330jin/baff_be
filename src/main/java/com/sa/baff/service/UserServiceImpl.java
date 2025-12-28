@@ -26,6 +26,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final UserFlagRepository userFlagRepository;
+    private final NicknameGeneratorService nicknameGeneratorService;
 
     @Override
     public UserDto getUserInfo(String userId) {
@@ -111,9 +112,15 @@ public class UserServiceImpl implements UserService {
         String platform = "ANDROID";
 
         if (userEntity == null) {
-            userEntity = new UserB(email, name, profileUrl, socialId, provider, platform);
+            // 1. 랜덤 프로필 이미지 URL 선택
+            String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
+
+            // 2. 닉네임은 null로 설정하여 UserEntity 객체 생성
+            userEntity = new UserB(email, null, randomImageUrl, socialId, provider, platform);
+
+            // 3. 닉네임 생성 및 DB 저장을 NicknameGeneratorService에 위임 (트랜잭션 적용)
+            nicknameGeneratorService.generateUniqueNicknameAndSave(userEntity);
             System.out.println("=====New user registered: " + socialId);
-            userRepository.save(userEntity);
         } else {
             System.out.println("=====Existing user logged in: " + socialId);
         }

@@ -47,7 +47,7 @@ public class WeightServiceImpl implements WeightService {
             weightToUpdate.setRecordDate(recordWeightParam.getRecordDate());
             weightRepository.save(weightToUpdate);
         } else {
-            if(user.getId() == 78L || user.getId() == 80L || user.getId() == 81L) {
+            if(user.getId() == 78L || user.getId() == 80L || user.getId() == 81L || user.getId() == 79L) {
                 Goals goals = goalsRepository.findFor78(user.getId());
                 if(goals.getStartWeight() == 0) {
                     goalsRepository.updateFor78(user.getId(), recordWeightParam.getWeight());
