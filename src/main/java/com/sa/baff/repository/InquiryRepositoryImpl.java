@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 import static com.sa.baff.domain.QInquiry.inquiry;
+import static com.sa.baff.domain.QUserB.userB;
 
 @Repository
 public class InquiryRepositoryImpl extends QuerydslRepositorySupport implements InquiryRepositoryCustom {
@@ -90,5 +91,46 @@ public class InquiryRepositoryImpl extends QuerydslRepositorySupport implements 
                         isInquiryId
                 )
                 .fetchFirst();
+    }
+
+    @Override
+    public List<InquiryDto.getAdminInquiryList> getAdminInquiryList(InquiryVO.getInquiryListParam param) {
+        // 1. DTO에서 필터 조건 추출
+        String inquiryType = (param.getInquiryType() != null) ? String.valueOf(param.getInquiryType()) : null;
+        String inquiryStatus = (param.getInquiryStatus() != null) ? String.valueOf(param.getInquiryStatus()) : null;
+
+        // 2. 동적 필터링 조건 정의
+        BooleanExpression isDelYn = inquiry.delYn.eq('N');
+
+        // inquiryType 동적 조건: null 또는 "ALL"인 경우 null 반환 (조건 무시)
+        BooleanExpression inquiryTypeEq = (inquiryType != null && !"ALL".equalsIgnoreCase(inquiryType))
+                ? inquiry.inquiryType.eq(InquiryType.valueOf(inquiryType))
+                : null;
+
+        // inquiryStatus 동적 조건: null 또는 "ALL"인 경우 null 반환 (조건 무시)
+        BooleanExpression inquiryStatusEq = (inquiryStatus != null && !"ALL".equalsIgnoreCase(inquiryStatus))
+                ? inquiry.status.eq(InquiryStatus.valueOf(inquiryStatus))
+                : null;
+
+        return jpaQueryFactory
+                .select(Projections.constructor(InquiryDto.getAdminInquiryList.class,
+                        inquiry.id,
+                        userB.id,
+                        userB.nickname,
+                        inquiry.title,
+                        inquiry.content,
+                        inquiry.inquiryType,
+                        inquiry.status,
+                        inquiry.regDateTime
+                ))
+                .from(inquiry)
+                .join(inquiry.user, userB)
+                .where(
+                        isDelYn,
+                        inquiryTypeEq,
+                        inquiryStatusEq
+                )
+                .orderBy(inquiry.regDateTime.desc())
+                .fetch();
     }
 }

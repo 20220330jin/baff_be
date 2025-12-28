@@ -13,4 +13,6 @@ public interface InquiryService {
 
     InquiryDto.getInquiryList getInquiryDetail(Long inquiryId, String socialId);
 
+    List<InquiryDto.getAdminInquiryList> getAdminInquiryList(InquiryVO.getInquiryListParam param);
+
 }

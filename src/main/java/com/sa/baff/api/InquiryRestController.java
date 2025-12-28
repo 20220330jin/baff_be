@@ -36,4 +36,9 @@ public class InquiryRestController {
     public InquiryDto.getInquiryList getInquiryDetail(@PathVariable Long inquiryId, @AuthenticationPrincipal String socialId) {
         return inquiryService.getInquiryDetail(inquiryId, socialId);
     }
+
+    @GetMapping("/admin/getInquiryList")
+    public List<InquiryDto.getAdminInquiryList> getAdminInquiryList(@ModelAttribute InquiryVO.getInquiryListParam param) {
+        return inquiryService.getAdminInquiryList(param);
+    }
 }

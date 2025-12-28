@@ -28,4 +28,28 @@ public class InquiryDto {
             this.regDateTime = regDateTime;
         }
     }
+
+    @Setter
+    @Getter
+    public static class getAdminInquiryList {
+        private Long inquiryId;
+        private Long userId;
+        private String nickname;
+        private String title;
+        private String content;
+        private InquiryType inquiryType;
+        private InquiryStatus inquiryStatus;
+        private LocalDateTime regDateTime;
+
+        public getAdminInquiryList(Long inquiryId, Long userId, String nickname, String title, String content, InquiryType inquiryType, InquiryStatus inquiryStatus, LocalDateTime regDateTime) {
+            this.inquiryId = inquiryId;
+            this.userId = userId;
+            this.nickname = nickname;
+            this.title = title;
+            this.content = content;
+            this.inquiryType = inquiryType;
+            this.inquiryStatus = inquiryStatus;
+            this.regDateTime = regDateTime;
+        }
+    }
 }

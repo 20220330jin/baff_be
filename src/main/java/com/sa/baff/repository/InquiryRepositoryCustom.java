@@ -10,4 +10,6 @@ public interface InquiryRepositoryCustom {
     List<InquiryDto.getInquiryList> getInquiryList(InquiryVO.getInquiryListParam param, Long userId);
 
     InquiryDto.getInquiryList getInquiryDetail(Long userId, Long inquiryId);
+
+    List<InquiryDto.getAdminInquiryList> getAdminInquiryList(InquiryVO.getInquiryListParam param);
 }
