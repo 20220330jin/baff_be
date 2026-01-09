@@ -78,4 +78,11 @@ public class WeightDto {
             this.userId = userId;
         }
     }
+
+    @Getter
+    @Setter
+    public static class getWeightDataForDashboard {
+        private Long weightRecordCount;
+        private Double weightChangeAverage;
+    }
 }

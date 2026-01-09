@@ -1,6 +1,5 @@
 package com.sa.baff.service;
 
-import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.WeightDto;
 import com.sa.baff.model.vo.WeightVO;
 
@@ -25,4 +24,6 @@ public interface WeightService {
     List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(WeightVO.getBattleWeightHistoryParam getBattleWeightHistoryParam);
 
     List<WeightDto.testWeight> test();
+
+    WeightDto.getWeightDataForDashboard getWeightDataForDashboard();
 }

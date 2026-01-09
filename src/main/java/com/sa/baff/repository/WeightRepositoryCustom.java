@@ -24,4 +24,6 @@ public interface WeightRepositoryCustom {
     List<WeightDto.getBattleWeightHistory> getBattleWeightHistory(WeightVO.getBattleWeightHistoryParam param);
 
     List<WeightDto.testWeight> test();
+
+    WeightDto.getWeightDataForDashboard getWeightDataForDashboard();
 }
