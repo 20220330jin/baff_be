@@ -46,24 +46,17 @@ public class ReviewRepositoryImpl extends QuerydslRepositorySupport implements R
         BooleanExpression myReviewCategory = category.equals("myReview") ? review.user.id.eq(userId) : null;
         OrderSpecifier popularCategory = category.equals("popular") ? review.likes.desc() : review.regDateTime.desc();
 
-        JPQLQuery<Long> isLikedExistsQuery = JPAExpressions.select(reviewLike.id.count())
-                .from(reviewLike)
-                .where(
-                        reviewLike.review.eq(review),
-                        reviewLike.user.id.eq(userId)
-                ).limit(1);
-
-        // 1. 전체 개수 조회 (페이징을 위해 필요)
+        // 1. 전체 개수 조회 (페이징을 위해 필요) - myReviewCategory 조건 추가
         Long total = jpaQueryFactory
                 .select(review.count())
                 .from(review)
-                .where(isDelYn)
+                .where(isDelYn, myReviewCategory)
                 .fetchOne();
 
         // null 체크
         long totalCount = (total != null) ? total : 0L;
 
-        // 2. 페이지네이션 데이터 조회
+        // 2. 페이지네이션 데이터 조회 - LEFT JOIN 사용으로 성능 개선
         List<ReviewDto.getReviewList> content = jpaQueryFactory
                 .select(Projections.constructor(ReviewDto.getReviewList.class,
                         review.id,
@@ -93,12 +86,15 @@ public class ReviewRepositoryImpl extends QuerydslRepositorySupport implements R
                         review.commentCount,
                         review.isPublic,
                         new CaseBuilder()
-                                .when(isLikedExistsQuery.exists())
+                                .when(reviewLike.isNotNull())
                                 .then(true)
                                 .otherwise(false)
                 ))
                 .from(review)
-                .join(review.user, user) // 닉네임 조회를 위해 User와 JOIN
+                .join(review.user, user)
+                .leftJoin(reviewLike)
+                .on(reviewLike.review.eq(review)
+                        .and(reviewLike.user.id.eq(userId)))
                 .where(isDelYn, myReviewCategory)
                 .orderBy(popularCategory, review.regDateTime.desc())
                 .offset((long) page * size)
