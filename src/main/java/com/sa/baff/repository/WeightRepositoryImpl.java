@@ -176,4 +176,107 @@ public class WeightRepositoryImpl extends QuerydslRepositorySupport implements W
 
         return result;
     }
+
+    /**
+     * 어제 기록한 유저 중 직전 기록이 있는 유저의 수와 평균 변화량 조회
+     * - 기존 로직(getWeightDataForDashboard): 어제-그제 연속 기록자만 집계
+     * - 신규 로직: 어제 기록 + 어제 이전 직전 기록이 있으면 집계 (날짜 무관)
+     */
+    public WeightDto.getWeightDataForDashboard getWeightDataForDashboardV2() {
+        QWeight weight = QWeight.weight1;
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime yesterdayStart = today.minusDays(1).atStartOfDay();
+        LocalDateTime yesterdayEnd = today.atStartOfDay();
+
+        // 디버그 로그
+        System.out.println("=== V2 Debug ===");
+        System.out.println("today: " + today);
+        System.out.println("yesterdayStart: " + yesterdayStart);
+        System.out.println("yesterdayEnd: " + yesterdayEnd);
+
+        BooleanExpression isDelYn = weight.delYn.eq('N');
+
+        // 단순 쿼리 테스트
+        Long testCount = jpaQueryFactory
+                .select(weight.count())
+                .from(weight)
+                .where(isDelYn
+                        .and(weight.regDateTime.goe(yesterdayStart))
+                        .and(weight.regDateTime.lt(yesterdayEnd)))
+                .fetchOne();
+        System.out.println("testCount: " + testCount);
+
+        // 1. 어제 각 유저별 최신 체중 조회
+        List<Tuple> yesterdayWeights = jpaQueryFactory
+                .select(weight.user.id, weight.weight)
+                .from(weight)
+                .where(isDelYn
+                        .and(weight.regDateTime.goe(yesterdayStart))
+                        .and(weight.regDateTime.lt(yesterdayEnd)))
+                .orderBy(weight.user.id.asc(), weight.regDateTime.desc())
+                .fetch();
+
+        Map<Long, Double> yesterdayWeightMap = yesterdayWeights.stream()
+                .collect(Collectors.toMap(
+                        tuple -> tuple.get(weight.user.id),
+                        tuple -> tuple.get(weight.weight),
+                        (existing, replacement) -> existing
+                ));
+
+        System.out.println("yesterdayWeightMap: " + yesterdayWeightMap);
+
+        if (yesterdayWeightMap.isEmpty()) {
+            WeightDto.getWeightDataForDashboard result = new WeightDto.getWeightDataForDashboard();
+            result.setWeightRecordCount(0L);
+            result.setWeightChangeAverage(0.0);
+            return result;
+        }
+
+        // 2. 어제 기록한 유저들의 어제 이전 가장 최근 기록 조회
+        List<Tuple> previousWeights = jpaQueryFactory
+                .select(weight.user.id, weight.weight)
+                .from(weight)
+                .where(isDelYn
+                        .and(weight.user.id.in(yesterdayWeightMap.keySet()))
+                        .and(weight.regDateTime.lt(yesterdayStart)))
+                .orderBy(weight.user.id.asc(), weight.regDateTime.desc())
+                .fetch();
+
+        Map<Long, Double> previousWeightMap = previousWeights.stream()
+                .collect(Collectors.toMap(
+                        tuple -> tuple.get(weight.user.id),
+                        tuple -> tuple.get(weight.weight),
+                        (existing, replacement) -> existing
+                ));
+
+        System.out.println("previousWeightMap: " + previousWeightMap);
+
+        // 3. 직전 기록이 있는 유저의 체중 변화량 계산
+        List<Double> weightDifferences = yesterdayWeightMap.entrySet().stream()
+                .filter(entry -> previousWeightMap.containsKey(entry.getKey()))
+                .map(entry -> {
+                    Double yesterdayWeight = entry.getValue();
+                    Double previousWeight = previousWeightMap.get(entry.getKey());
+                    return yesterdayWeight - previousWeight;
+                })
+                .collect(Collectors.toList());
+
+        // 4. 결과 반환
+        Long weightRecordCount = (long) weightDifferences.size();
+        System.out.println("weightDifferences.size(): " + weightRecordCount);
+        Double weightChangeAverage = 0.0;
+        if (!weightDifferences.isEmpty()) {
+            weightChangeAverage = weightDifferences.stream()
+                    .mapToDouble(Double::doubleValue)
+                    .average()
+                    .orElse(0.0);
+        }
+
+        WeightDto.getWeightDataForDashboard result = new WeightDto.getWeightDataForDashboard();
+        result.setWeightRecordCount(weightRecordCount);
+        result.setWeightChangeAverage(weightChangeAverage);
+
+        return result;
+    }
 }

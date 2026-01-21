@@ -132,6 +132,7 @@ public class WeightServiceImpl implements WeightService {
 
     @Override
     public WeightDto.getWeightDataForDashboard getWeightDataForDashboard() {
-        return weightRepository.getWeightDataForDashboard();
+        return weightRepository.getWeightDataForDashboardV2();
+//        return weightRepository.getWeightDataForDashboard();
     }
 }

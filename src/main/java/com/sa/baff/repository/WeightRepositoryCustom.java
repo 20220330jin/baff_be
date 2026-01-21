@@ -26,4 +26,9 @@ public interface WeightRepositoryCustom {
     List<WeightDto.testWeight> test();
 
     WeightDto.getWeightDataForDashboard getWeightDataForDashboard();
+
+    /**
+     * 어제 기록 + 직전 기록 비교 방식 (날짜 무관)
+     */
+    WeightDto.getWeightDataForDashboard getWeightDataForDashboardV2();
 }
