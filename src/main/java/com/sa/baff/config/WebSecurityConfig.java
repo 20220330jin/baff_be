@@ -100,6 +100,9 @@ public class WebSecurityConfig {
           corsConfiguration.addAllowedOrigin("https://baff-fe.vercel.app");
           corsConfiguration.addAllowedOrigin("https://change-up.me");
           corsConfiguration.addAllowedOrigin("https://www.change-up.me");
+          // Toss 미니앱
+          corsConfiguration.addAllowedOrigin("https://changeup.apps.tossmini.com");
+          corsConfiguration.addAllowedOrigin("https://changeup.private-apps.tossmini.com");
 
           UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
           source.registerCorsConfiguration("/**", corsConfiguration);

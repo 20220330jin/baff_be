@@ -4,6 +4,7 @@ import com.sa.baff.domain.UserB;
 import com.sa.baff.domain.UserFlag;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
+import com.sa.baff.model.vo.TossVO;
 import com.sa.baff.model.vo.UserVO;
 import com.sa.baff.repository.*;
 
@@ -11,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -177,5 +180,17 @@ public class UserServiceImpl implements UserService {
         }
         // 배포 환경에서는 이전에 확인했던 점(.) 포함 도메인으로 통일
         return ".baff-be-ckop.onrender.com";
+    }
+
+    // TODO: Step 5에서 실제 Toss API 연동 구현
+    @Override
+    public String loginWithToss(TossVO.LoginRequest request, HttpServletRequest httpRequest) {
+        throw new UnsupportedOperationException("Toss 로그인 미구현 (Step 5에서 구현 예정)");
+    }
+
+    @Override
+    public void unlinkTossAccount(String userKey) {
+        log.info("Toss unlink-callback 수신 - userKey: {}", userKey);
+        // TODO: Step 5에서 실제 연동 해제 구현 (user.setDelYn('Y'))
     }
 }

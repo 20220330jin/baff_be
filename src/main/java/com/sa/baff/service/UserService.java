@@ -3,6 +3,7 @@ package com.sa.baff.service;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
+import com.sa.baff.model.vo.TossVO;
 import com.sa.baff.model.vo.UserVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -45,4 +46,8 @@ public interface UserService {
     List<UserDto.getUserFlagForPopUp> getUserFlagForPopUp(String socialId);
 
     void insertUserFlag(String socialId, UserVO.insertUserFlag userFlag);
+
+    String loginWithToss(TossVO.LoginRequest request, HttpServletRequest httpRequest);
+
+    void unlinkTossAccount(String userKey);
 }
