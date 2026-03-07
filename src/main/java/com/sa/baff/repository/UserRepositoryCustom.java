@@ -14,6 +14,8 @@ public interface UserRepositoryCustom {
 
     void withdrawal(Long userId);
 
+    void reactivate(Long userId);
+
     void editProfileImage(Long userId, UserVO.editProfileImage param);
 
     UserDto.editNicknameStatus editNickname(Long userId, String nickname);

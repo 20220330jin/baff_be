@@ -70,6 +70,17 @@ public class UserRepositoryImpl extends QuerydslRepositorySupport implements Use
     }
 
     @Override
+    public void reactivate(Long userId) {
+        QUserB user = QUserB.userB;
+
+        jpaQueryFactory.update(user)
+                .set(user.delYn, 'N')
+                .set(user.modDateTime, DateTimeUtils.now())
+                .where(user.id.eq(userId))
+                .execute();
+    }
+
+    @Override
     public void editProfileImage(Long userId, UserVO.editProfileImage param) {
         QUserB user = QUserB.userB;
 

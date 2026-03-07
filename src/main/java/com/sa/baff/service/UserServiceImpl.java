@@ -6,19 +6,32 @@ import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.model.vo.TossVO;
 import com.sa.baff.model.vo.UserVO;
+import com.sa.baff.provider.JwtProvider;
 import com.sa.baff.repository.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 @Slf4j
@@ -30,10 +43,20 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserFlagRepository userFlagRepository;
     private final NicknameGeneratorService nicknameGeneratorService;
+    private final JwtProvider jwtProvider;
+
+    @Autowired(required = false)
+    @Qualifier("tossWebClient")
+    private WebClient tossWebClient;
+
+    @Value("${toss.decrypt.key:}")
+    private String tossDecryptKey;
+
+    @Value("${toss.decrypt.aad:}")
+    private String tossAad;
 
     @Override
     public UserDto getUserInfo(String userId) {
-        // userId는 JWT의 subject로, UserEntity의 socialId와 매핑됩니다.
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(userId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
         return UserDto.from(user);
     }
@@ -70,23 +93,20 @@ public class UserServiceImpl implements UserService {
     @Override
     public ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response) {
         if ("https://www.change-up.me".equals(request.getHeader("Origin"))) {
-            // 운영 환경의 경우
-            ResponseCookie deleteCookie = ResponseCookie.from("accessToken", "") // 값을 비움
+            ResponseCookie deleteCookie = ResponseCookie.from("accessToken", "")
                     .path("/")
-                    .maxAge(0) // Max-Age를 0으로 설정하여 즉시 삭제
+                    .maxAge(0)
                     .httpOnly(true)
                     .secure(true)
-                    .sameSite("Lax") // 운영 환경 로그인 시 사용했던 SameSite 속성
-                    .domain(".change-up.me") // 운영 환경의 공통 상위 도메인
+                    .sameSite("Lax")
+                    .domain(".change-up.me")
                     .build();
 
             response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
             System.out.println("=================LOGOUT (Production)");
 
-
         } else {
-            // 로컬 or 개발환경인경우
-            String dynamicDomain = determineCookieDomain(request); // 동적으로 도메인 결정
+            String dynamicDomain = determineCookieDomain(request);
 
             String cookieHeader = String.format("accessToken=; Path=/; Max-Age=0; Secure; HttpOnly; SameSite=None; Domain=%s", dynamicDomain);
             response.setHeader("Set-Cookie", cookieHeader);
@@ -98,13 +118,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void insertHeight(String socialId, Double height) {
-        // socialId를 사용하여 데이터베이스에서 유저를 찾음
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        // 찾은 유저의 height 필드를 업데이트
         user.setHeight(height);
-
-        // 변경된 내용을 저장
         userRepository.save(user);
     }
 
@@ -115,13 +130,8 @@ public class UserServiceImpl implements UserService {
         String platform = "ANDROID";
 
         if (userEntity == null) {
-            // 1. 랜덤 프로필 이미지 URL 선택
             String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
-
-            // 2. 닉네임은 null로 설정하여 UserEntity 객체 생성
             userEntity = new UserB(email, null, randomImageUrl, socialId, provider, platform);
-
-            // 3. 닉네임 생성 및 DB 저장을 NicknameGeneratorService에 위임 (트랜잭션 적용)
             nicknameGeneratorService.generateUniqueNicknameAndSave(userEntity);
             System.out.println("=====New user registered: " + socialId);
         } else {
@@ -134,7 +144,6 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void withdrawal(String socialId) {
         UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-
         userRepository.withdrawal(user.getId());
     }
 
@@ -142,7 +151,6 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void editProfileImage(String socialId, UserVO.editProfileImage param) {
         UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-
         userRepository.editProfileImage(user.getId(), param);
     }
 
@@ -150,14 +158,12 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserDto.editNicknameStatus editNickname(String socialId, UserVO.editNicknameRequest param) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
-
         return userRepository.editNickname(user.getId(), param.getNickname());
     }
 
     @Override
     public List<UserDto.getUserFlagForPopUp> getUserFlagForPopUp(String socialId) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
-
         return userFlagRepository.getUserFlagForPopUp(user.getId());
     }
 
@@ -166,31 +172,207 @@ public class UserServiceImpl implements UserService {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UserFlag userFlag1 = new UserFlag();
-
         userFlag1.setFlagKey(userFlag.getFlagKey());
         userFlag1.setUser(user);
-
         userFlagRepository.save(userFlag1);
     }
 
-    private String determineCookieDomain(HttpServletRequest request) {
-        String origin = request.getHeader("Origin");
-        if (origin != null && origin.contains("localhost")) {
-            return "localhost"; // 로컬 환경에서는 localhost 도메인 사용
-        }
-        // 배포 환경에서는 이전에 확인했던 점(.) 포함 도메인으로 통일
-        return ".baff-be-ckop.onrender.com";
-    }
+    // ========== Toss 인증 ==========
 
-    // TODO: Step 5에서 실제 Toss API 연동 구현
     @Override
     public String loginWithToss(TossVO.LoginRequest request, HttpServletRequest httpRequest) {
-        throw new UnsupportedOperationException("Toss 로그인 미구현 (Step 5에서 구현 예정)");
+        if (tossWebClient == null) {
+            throw new IllegalStateException("Toss 연동이 설정되지 않았습니다.");
+        }
+
+        // 1. authorizationCode → accessToken
+        TokenResponse tokenResponse = getAccessToken(request.getAuthorizationCode(), request.getReferrer());
+
+        // 2. accessToken → 암호화된 사용자 정보
+        UserInfo encryptedUserInfo = getUserInfoFromToss(tokenResponse.getSuccess().getAccessToken());
+
+        // 3. 복호화
+        String decryptedName = decryptField(encryptedUserInfo.getName());
+        String decryptedEmail = decryptField(encryptedUserInfo.getEmail());
+
+        log.info("Toss login - userKey: {}, name: {}", encryptedUserInfo.getUserKey(), decryptedName);
+
+        // 4. 사용자 조회 또는 생성
+        String socialId = String.valueOf(encryptedUserInfo.getUserKey());
+        UserB user = userRepository.findBySocialId(socialId)
+                .map(existingUser -> {
+                    if (existingUser.getDelYn() == 'Y') {
+                        log.info("Reactivating unlinked Toss user: {}", socialId);
+                        userRepository.reactivate(existingUser.getId());
+                    }
+                    return existingUser;
+                })
+                .orElseGet(() -> {
+                    String email = (decryptedEmail != null && !decryptedEmail.isBlank())
+                            ? decryptedEmail
+                            : "toss_" + socialId + "@toss.im";
+
+                    String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
+                    UserB newUser = new UserB(email, null, randomImageUrl, socialId, "toss", "TOSS");
+                    nicknameGeneratorService.generateUniqueNicknameAndSave(newUser);
+                    log.info("New Toss user created: {}", socialId);
+                    return newUser;
+                });
+
+        // 5. JWT 생성
+        return jwtProvider.create(user.getSocialId());
     }
 
     @Override
     public void unlinkTossAccount(String userKey) {
         log.info("Toss unlink-callback 수신 - userKey: {}", userKey);
-        // TODO: Step 5에서 실제 연동 해제 구현 (user.setDelYn('Y'))
+        userRepository.findBySocialId(userKey).ifPresent(user -> {
+            userRepository.withdrawal(user.getId());
+            log.info("Toss 연결 해제 처리 완료 - userKey: {}, userId: {}", userKey, user.getId());
+        });
+    }
+
+    // ========== Toss 내부 메서드 ==========
+
+    private TokenResponse getAccessToken(String authorizationCode, String referrer) {
+        log.info("Toss token 요청 - authorizationCode: {}", authorizationCode);
+
+        try {
+            String rawResponse = tossWebClient.post()
+                    .uri("/api-partner/v1/apps-in-toss/user/oauth2/generate-token")
+                    .bodyValue(new TokenGenerationRequest(authorizationCode, referrer))
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            log.info("Toss token 응답: {}", rawResponse);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(rawResponse, TokenResponse.class);
+
+        } catch (WebClientResponseException e) {
+            log.error("Toss token API 에러: Status={}, Body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Toss token API error: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            log.error("Toss token 요청 중 에러: {}", e.getMessage(), e);
+            throw new RuntimeException("Toss token generation failed", e);
+        }
+    }
+
+    private UserInfo getUserInfoFromToss(String accessToken) {
+        log.info("Toss 사용자 정보 요청");
+
+        try {
+            String rawResponse = tossWebClient.get()
+                    .uri("/api-partner/v1/apps-in-toss/user/oauth2/login-me")
+                    .header("Authorization", "Bearer " + accessToken)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            log.info("Toss 사용자 정보 응답: {}", rawResponse);
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            TossUserInfoResponse response = objectMapper.readValue(rawResponse, TossUserInfoResponse.class);
+
+            if (response != null && response.getSuccess() != null) {
+                return response.getSuccess();
+            }
+            throw new RuntimeException("Toss user info response is null");
+
+        } catch (WebClientResponseException e) {
+            log.error("Toss user info API 에러: Status={}, Body={}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("Toss user info API error: " + e.getResponseBodyAsString(), e);
+        } catch (Exception e) {
+            log.error("Toss 사용자 정보 요청 중 에러: {}", e.getMessage(), e);
+            throw new RuntimeException("Toss user info retrieval failed", e);
+        }
+    }
+
+    private String decryptField(String encryptedData) {
+        if (encryptedData == null || encryptedData.isEmpty()) {
+            return null;
+        }
+
+        try {
+            final int IV_LENGTH = 12;
+            byte[] decoded = Base64.getDecoder().decode(encryptedData);
+
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            byte[] keyBytes = Base64.getDecoder().decode(tossDecryptKey);
+            SecretKeySpec key = new SecretKeySpec(keyBytes, "AES");
+
+            byte[] iv = new byte[IV_LENGTH];
+            System.arraycopy(decoded, 0, iv, 0, IV_LENGTH);
+
+            GCMParameterSpec nonceSpec = new GCMParameterSpec(16 * Byte.SIZE, iv);
+            cipher.init(Cipher.DECRYPT_MODE, key, nonceSpec);
+            cipher.updateAAD(tossAad.getBytes());
+
+            byte[] decrypted = cipher.doFinal(decoded, IV_LENGTH, decoded.length - IV_LENGTH);
+            return new String(decrypted);
+
+        } catch (Exception e) {
+            log.error("Toss 복호화 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to decrypt Toss user info", e);
+        }
+    }
+
+    // ========== Toss 내부 DTO ==========
+
+    @Getter
+    @RequiredArgsConstructor
+    private static class TokenGenerationRequest {
+        private final String authorizationCode;
+        private final String referrer;
+    }
+
+    @Getter
+    private static class TokenResponse {
+        private String resultType;
+        private SuccessResponse success;
+    }
+
+    @Getter
+    private static class SuccessResponse {
+        private String accessToken;
+        private String refreshToken;
+        private String expiresIn;
+        private String tokenType;
+        private String scope;
+    }
+
+    @Getter
+    private static class TossUserInfoResponse {
+        private String resultType;
+        private UserInfo success;
+    }
+
+    @Getter @Setter
+    private static class UserInfo {
+        private Long userKey;
+        private String scope;
+        private String[] agreedTerms;
+        private String policy;
+        private String certTxId;
+        private String name;
+        private String callingCode;
+        private String phone;
+        private String birthday;
+        private String ci;
+        private String di;
+        private String gender;
+        private String nationality;
+        private String email;
+    }
+
+    // ========== 기존 유틸 ==========
+
+    private String determineCookieDomain(HttpServletRequest request) {
+        String origin = request.getHeader("Origin");
+        if (origin != null && origin.contains("localhost")) {
+            return "localhost";
+        }
+        return ".baff-be-ckop.onrender.com";
     }
 }
