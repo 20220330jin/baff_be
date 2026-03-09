@@ -50,4 +50,9 @@ public interface UserService {
     String loginWithToss(TossVO.LoginRequest request, HttpServletRequest httpRequest);
 
     void unlinkTossAccount(String userKey);
+
+    /**
+     * 닉네임으로 유저 검색 (배틀 초대용)
+     */
+    List<UserBDto.searchResult> searchUsersByNickname(String nickname, String socialId);
 }

@@ -366,6 +366,22 @@ public class UserServiceImpl implements UserService {
         private String email;
     }
 
+    @Override
+    public List<UserBDto.searchResult> searchUsersByNickname(String nickname, String socialId) {
+        List<UserB> users = userRepository.findByNicknameContainingAndDelYn(nickname, 'N');
+        List<UserBDto.searchResult> results = new ArrayList<>();
+        for (UserB user : users) {
+            // 자기 자신 제외
+            if (user.getSocialId().equals(socialId)) continue;
+            UserBDto.searchResult dto = new UserBDto.searchResult();
+            dto.setUserId(user.getId());
+            dto.setNickname(user.getNickname());
+            dto.setProfileImageUrl(user.getProfileImageUrl());
+            results.add(dto);
+        }
+        return results;
+    }
+
     // ========== 기존 유틸 ==========
 
     private String determineCookieDomain(HttpServletRequest request) {

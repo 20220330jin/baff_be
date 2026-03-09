@@ -39,6 +39,9 @@ public class BattleRoom extends BaseEntity{
     private LocalDate startDate; // 대결 시작일
     private LocalDate endDate; // 대결 종료일
 
+    @Column(nullable = true)
+    private Long betAmount = 0L; // 내기 조각 수량
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "host_id")
     private UserB host;

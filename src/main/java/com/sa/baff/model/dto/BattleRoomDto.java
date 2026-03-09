@@ -2,6 +2,7 @@ package com.sa.baff.model.dto;
 
 import com.sa.baff.util.BattleStatus;
 import com.sa.baff.util.GoalType;
+import com.sa.baff.util.InviteStatus;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -115,6 +116,17 @@ public class BattleRoomDto {
         private GoalType goalType;
         private Double targetValue;
         private boolean isReady;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    public static class InviteInfo {
+        private Long inviteId;
+        private String roomName;
+        private String entryCode;
+        private String inviterNickname;
+        private InviteStatus status;
     }
 
     @Getter

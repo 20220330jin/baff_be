@@ -37,6 +37,17 @@ public class UserBDto {
     }
 
     /**
+     * 유저 닉네임 검색 결과 DTO
+     */
+    @Getter
+    @Setter
+    public static class searchResult {
+        private Long userId;
+        private String nickname;
+        private String profileImageUrl;
+    }
+
+    /**
      * 유저 정보 DTO
      */
     @Getter

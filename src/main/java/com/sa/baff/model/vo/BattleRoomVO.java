@@ -29,4 +29,16 @@ public class BattleRoomVO {
         GoalType goalType;
         Double targetValue;
     }
+
+    @Getter
+    @Setter
+    public static class inviteRequest {
+        Long inviteeUserId;
+    }
+
+    @Getter
+    @Setter
+    public static class setBetRequest {
+        Long betAmount;
+    }
 }

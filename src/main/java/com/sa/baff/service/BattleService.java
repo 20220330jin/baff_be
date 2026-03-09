@@ -87,4 +87,29 @@ public interface BattleService {
     List<BattleRoomDto.getParticipantsList> getParticipantsList(String entryCode);
 
     BattleRoomDto.getBattleDetailForReview getBattleDetailForReview(String entryCode, String socialId);
+
+    /**
+     * 배틀 방에 유저를 초대
+     */
+    void inviteUser(String entryCode, Long inviteeUserId, String socialId);
+
+    /**
+     * 내가 받은 초대 목록 조회
+     */
+    List<BattleRoomDto.InviteInfo> getMyInvites(String socialId);
+
+    /**
+     * 초대 수락
+     */
+    void acceptInvite(Long inviteId, String socialId);
+
+    /**
+     * 초대 거절
+     */
+    void declineInvite(Long inviteId, String socialId);
+
+    /**
+     * 배틀 방 내기 금액 설정
+     */
+    void setBetAmount(String entryCode, Long betAmount, String socialId);
 }

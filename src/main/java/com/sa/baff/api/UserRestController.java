@@ -68,6 +68,14 @@ public class UserRestController {
         return userService.getUserInfoForProfile(userId);
     }
 
+    /**
+     * 닉네임으로 유저 검색 API (배틀 초대용)
+     */
+    @GetMapping("/search")
+    public List<UserBDto.searchResult> searchUsers(@RequestParam String nickname, @AuthenticationPrincipal String socialId) {
+        return userService.searchUsersByNickname(nickname, socialId);
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response) {
             return this.userService.userLogout(request, response);

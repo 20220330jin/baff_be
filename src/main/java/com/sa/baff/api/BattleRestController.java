@@ -79,4 +79,29 @@ public class BattleRestController {
     public BattleRoomDto.getBattleDetailForReview getBattleDetailForReview(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
         return battleService.getBattleDetailForReview(entryCode, socialId);
     }
+
+    @PostMapping("/{entryCode}/invite")
+    public void inviteUser(@PathVariable String entryCode, @RequestBody BattleRoomVO.inviteRequest request, @AuthenticationPrincipal String socialId) {
+        battleService.inviteUser(entryCode, request.getInviteeUserId(), socialId);
+    }
+
+    @GetMapping("/invites")
+    public List<BattleRoomDto.InviteInfo> getMyInvites(@AuthenticationPrincipal String socialId) {
+        return battleService.getMyInvites(socialId);
+    }
+
+    @PostMapping("/invites/{inviteId}/accept")
+    public void acceptInvite(@PathVariable Long inviteId, @AuthenticationPrincipal String socialId) {
+        battleService.acceptInvite(inviteId, socialId);
+    }
+
+    @PostMapping("/invites/{inviteId}/decline")
+    public void declineInvite(@PathVariable Long inviteId, @AuthenticationPrincipal String socialId) {
+        battleService.declineInvite(inviteId, socialId);
+    }
+
+    @PostMapping("/{entryCode}/setBet")
+    public void setBetAmount(@PathVariable String entryCode, @RequestBody BattleRoomVO.setBetRequest request, @AuthenticationPrincipal String socialId) {
+        battleService.setBetAmount(entryCode, request.getBetAmount(), socialId);
+    }
 }

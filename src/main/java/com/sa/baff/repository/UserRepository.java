@@ -23,4 +23,6 @@ public interface UserRepository extends CrudRepository<UserB, Long>, UserReposit
     Iterable<UserB> findAllByOrderByRegDateTimeDesc();
 
     long countBynicknameStartingWith(String prefix);
+
+    List<UserB> findByNicknameContainingAndDelYn(String nickname, Character delYn);
 }
