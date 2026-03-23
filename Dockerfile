@@ -4,7 +4,7 @@ USER root
 WORKDIR /app
 
 # Render가 루트에 생성한 application-local.yml을 빌드 이미지의 최종 목적지로 미리 복사
-COPY --chown=gradle:gradle src/main/resources/application-local.yml /app/src/main/resources/application-local.yml
+COPY --chown=gradle:gradle application-local.yml /app/src/main/resources/application-local.yml
 
 COPY --chown=gradle:gradle build.gradle settings.gradle gradlew /app/
 COPY --chown=gradle:gradle gradle /app/gradle
