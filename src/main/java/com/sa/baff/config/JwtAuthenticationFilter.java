@@ -30,32 +30,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         try {
-            System.out.println("-----JwtAuthenticationFilter - Request URI: " + request);
-//            String token = parseCookie(request);
             String token = parseBearerToken(request);
 
             if (token == null || token.equalsIgnoreCase("null")) {
                 token = parseCookie(request);
             }
 
-            System.out.println("-----JwtAuthenticationFilter - Parsed Token: " + token);
             if (token != null && !token.equalsIgnoreCase("null")) {
                 String userId = jwtProvider.validate(token);
 
-                System.out.println("=====JwtAuthenticationFilter - User ID from token: " + userId);
-                System.out.println("=====JwtAuthenticationFilter - Token: " + token);
-                System.out.println("=====JwtAuthenticationFilter - VALIDATE: " + jwtProvider.validate(token));
+                if (userId != null) {
+                    // JWT에서 role 추출 (없으면 USER 기본값)
+                    String role = jwtProvider.getRole(token);
+                    if (role == null || role.isBlank()) {
+                        role = "USER";
+                    }
 
-                AbstractAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userId,
-                        null,
-                        AuthorityUtils.NO_AUTHORITIES
-                );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    AbstractAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userId,
+                            null,
+                            AuthorityUtils.createAuthorityList("ROLE_" + role)
+                    );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
-                securityContext.setAuthentication(authentication);
-                SecurityContextHolder.setContext(securityContext);
+                    SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+                    securityContext.setAuthentication(authentication);
+                    SecurityContextHolder.setContext(securityContext);
+                }
             }
         } catch (Exception exception) {
             exception.printStackTrace();

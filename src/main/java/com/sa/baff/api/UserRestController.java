@@ -3,6 +3,7 @@ package com.sa.baff.api;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.model.vo.UserVO;
+import com.sa.baff.profileImage.ProfileImage;
 import com.sa.baff.service.R2Service;
 import com.sa.baff.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -99,6 +100,11 @@ public class UserRestController {
         String imageUrl = r2Service.uploadSingleFile(file);
 
         return ResponseEntity.ok(imageUrl);
+    }
+
+    @GetMapping("/getProfileImages")
+    public List<String> getProfileImages() {
+        return ProfileImage.PROFILE_IMAGE_URLS;
     }
 
     @PostMapping("/editProfileImage")

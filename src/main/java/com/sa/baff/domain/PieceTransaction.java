@@ -33,11 +33,22 @@ public class PieceTransaction extends BaseEntity {
     @JoinColumn(name = "battle_room_id")
     private BattleRoom battleRoom;
 
+    /** 리워드 상세 타입 (RewardConfig 참조, 배틀 트랜잭션은 null) */
+    @Column(name = "reward_type")
+    private String rewardType;
+
+    /** 참조 ID (체중기록ID, 리뷰ID 등, 배틀 트랜잭션은 null) */
+    @Column(name = "reference_id")
+    private Long referenceId;
+
     @Builder
-    public PieceTransaction(UserB user, Long amount, PieceTransactionType type, BattleRoom battleRoom) {
+    public PieceTransaction(UserB user, Long amount, PieceTransactionType type,
+                            BattleRoom battleRoom, String rewardType, Long referenceId) {
         this.user = user;
         this.amount = amount;
         this.type = type;
         this.battleRoom = battleRoom;
+        this.rewardType = rewardType;
+        this.referenceId = referenceId;
     }
 }

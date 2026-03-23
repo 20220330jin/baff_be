@@ -16,4 +16,6 @@ public interface BattleInviteRepository extends JpaRepository<BattleInvite, Long
     Optional<BattleInvite> findByRoomAndInviteeAndStatusAndDelYn(BattleRoom room, UserB invitee, InviteStatus status, Character delYn);
 
     boolean existsByRoomAndInviteeAndStatusAndDelYn(BattleRoom room, UserB invitee, InviteStatus status, Character delYn);
+
+    List<BattleInvite> findAllByRoomAndInviterAndDelYn(BattleRoom room, UserB inviter, Character delYn);
 }

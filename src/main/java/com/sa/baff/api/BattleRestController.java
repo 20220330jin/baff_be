@@ -80,6 +80,7 @@ public class BattleRestController {
         return battleService.getBattleDetailForReview(entryCode, socialId);
     }
 
+    // === [토스] 초대 시스템 (토스 미니앱에서는 코드 참가 대신 초대 방식 사용) ===
     @PostMapping("/{entryCode}/invite")
     public void inviteUser(@PathVariable String entryCode, @RequestBody BattleRoomVO.inviteRequest request, @AuthenticationPrincipal String socialId) {
         battleService.inviteUser(entryCode, request.getInviteeUserId(), socialId);
@@ -103,5 +104,17 @@ public class BattleRestController {
     @PostMapping("/{entryCode}/setBet")
     public void setBetAmount(@PathVariable String entryCode, @RequestBody BattleRoomVO.setBetRequest request, @AuthenticationPrincipal String socialId) {
         battleService.setBetAmount(entryCode, request.getBetAmount(), socialId);
+    }
+
+    // [토스] 초대 취소
+    @PostMapping("/invites/{inviteId}/cancel")
+    public void cancelInvite(@PathVariable Long inviteId, @AuthenticationPrincipal String socialId) {
+        battleService.cancelInvite(inviteId, socialId);
+    }
+
+    // [토스] 보낸 초대 목록 조회
+    @GetMapping("/{entryCode}/sentInvites")
+    public List<BattleRoomDto.SentInviteInfo> getSentInvites(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
+        return battleService.getSentInvites(entryCode, socialId);
     }
 }

@@ -192,6 +192,7 @@ public class BattleServiceImpl implements BattleService {
         response.setEntryCode(battleRoom.getEntryCode());
         response.setParticipants(participantInfoList);
         response.setHostId(battleRoom.getHost().getId());
+        response.setBetAmount(battleRoom.getBetAmount());
 
         return response;
     }
@@ -714,12 +715,51 @@ public class BattleServiceImpl implements BattleService {
         List<BattleParticipant> participants = battleParticipantRepository.findAllByRoomAndDelYn(battleRoom, 'N');
         for (BattleParticipant participant : participants) {
             if (!pieceService.hasEnoughBalance(participant.getUser().getSocialId(), betAmount)) {
-                throw new IllegalStateException(participant.getUser().getNickname() + "님의 조각이 부족합니다.");
+                throw new IllegalStateException("조각이 부족한 참가자가 있습니다.");
             }
         }
 
         battleRoom.setBetAmount(betAmount);
         battleRoomRepository.save(battleRoom);
+    }
+
+    @Override
+    public void cancelInvite(Long inviteId, String socialId) {
+        UserB user = userRepository.findBySocialId(socialId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        BattleInvite invite = battleInviteRepository.findById(inviteId)
+                .orElseThrow(() -> new IllegalArgumentException("초대를 찾을 수 없습니다."));
+
+        if (!invite.getInviter().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("본인이 보낸 초대만 취소할 수 있습니다.");
+        }
+
+        if (invite.getStatus() != InviteStatus.PENDING) {
+            throw new IllegalStateException("대기 중인 초대만 취소할 수 있습니다.");
+        }
+
+        invite.setStatus(InviteStatus.CANCELLED);
+    }
+
+    @Override
+    public List<BattleRoomDto.SentInviteInfo> getSentInvites(String entryCode, String socialId) {
+        UserB user = userRepository.findBySocialId(socialId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        BattleRoom battleRoom = battleRoomRepository.findByEntryCode(entryCode)
+                .orElseThrow(() -> new IllegalArgumentException("방을 찾을 수 없습니다."));
+
+        List<BattleInvite> invites = battleInviteRepository.findAllByRoomAndInviterAndDelYn(battleRoom, user, 'N');
+
+        return invites.stream()
+                .map(invite -> BattleRoomDto.SentInviteInfo.builder()
+                        .inviteId(invite.getId())
+                        .inviteeNickname(invite.getInvitee().getNickname())
+                        .inviteeUserId(invite.getInvitee().getId())
+                        .status(invite.getStatus())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private Double calculateTargetWeightLoss(BattleParticipant participant) {

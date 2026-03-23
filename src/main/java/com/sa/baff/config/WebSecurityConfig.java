@@ -52,13 +52,7 @@ public class WebSecurityConfig {
                    * antMatchers 대신 requestMatchers를 사용합니다.
                    */
                   .authorizeHttpRequests(authorize -> authorize
-                          // '/api/user/me' 경로는 모든 사용자(인증 여부와 상관없이) 접근을 허용합니다. (내 정보 조회)
-//                          .requestMatchers("/api/user/me").permitAll()
-                          // '/api/question/createquestion' 경로는 인증된 사용자만 접근을 허용합니다.
-//                          .requestMatchers("/api/question/createquestion").authenticated()
-                          // '/api/comment/createComment' 경로는 모든 사용자(회원, 비회원)의 접근을 허용합니다.
-//                          .requestMatchers("/api/comment/createComment").permitAll()
-                          // 위에서 지정한 경로 외의 모든 요청은 일단 허용합니다.
+                          .requestMatchers("/api/admin/**").hasRole("ADMIN")
                           .anyRequest().permitAll()
                   )
                   /**

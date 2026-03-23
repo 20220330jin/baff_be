@@ -15,6 +15,8 @@ public class PieceDto {
     @AllArgsConstructor
     public static class balanceResponse {
         private Long balance;
+        private Long totalEarned;
+        private Long totalExchanged;
     }
 
     @Getter

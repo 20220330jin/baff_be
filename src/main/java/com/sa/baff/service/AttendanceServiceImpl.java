@@ -1,0 +1,235 @@
+package com.sa.baff.service;
+
+import com.sa.baff.domain.*;
+import com.sa.baff.model.dto.AttendanceDto;
+import com.sa.baff.repository.*;
+import com.sa.baff.util.PieceTransactionType;
+import com.sa.baff.util.RewardStatus;
+import com.sa.baff.util.RewardType;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+@Transactional
+@ConditionalOnProperty(name = "changeup.reward.enabled", havingValue = "true")
+public class AttendanceServiceImpl implements AttendanceService {
+
+    private final UserRepository userRepository;
+    private final PieceRepository pieceRepository;
+    private final PieceTransactionRepository pieceTransactionRepository;
+    private final UserAttendanceRepository userAttendanceRepository;
+    private final RewardConfigRepository rewardConfigRepository;
+    private final RewardHistoryRepository rewardHistoryRepository;
+
+    private final Random random = new Random();
+
+    /** 스트릭 보너스 기준 (일수 → 보너스g). RewardConfig에 없으면 기본값 사용 */
+    private static final int[][] DEFAULT_STREAK_BONUSES = {
+            {3, 2}, {7, 5}, {14, 10}, {30, 20}
+    };
+
+    @Override
+    public AttendanceDto.checkResponse checkAttendance(String socialId) {
+        UserB user = findUser(socialId);
+        Long userId = user.getId();
+        LocalDate today = LocalDate.now();
+
+        // 중복 출석 체크
+        if (userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today).isPresent()) {
+            throw new IllegalStateException("오늘은 이미 출석했어요.");
+        }
+
+        // 스트릭 계산 (어제 출석 여부)
+        LocalDate yesterday = today.minusDays(1);
+        Optional<UserAttendance> yesterdayAttendance =
+                userAttendanceRepository.findByUserIdAndAttendanceDate(userId, yesterday);
+        int newStreakCount = yesterdayAttendance.isPresent()
+                ? yesterdayAttendance.get().getStreakCount() + 1
+                : 1;
+
+        // 기본 출석 리워드 지급
+        int earnedGrams = determineAmount(RewardType.ATTENDANCE);
+        addPointsToUser(user, earnedGrams, PieceTransactionType.REWARD_ATTENDANCE, null);
+
+        RewardHistory history = new RewardHistory(
+                userId, RewardType.ATTENDANCE, earnedGrams, RewardStatus.SUCCESS, null);
+        rewardHistoryRepository.save(history);
+
+        // 연속 출석 보너스 확인
+        int streakBonusGrams = 0;
+        boolean streakBonusEarned = false;
+
+        List<RewardConfig> streakConfigs =
+                rewardConfigRepository.findActiveConfigs(RewardType.ATTENDANCE_STREAK);
+
+        if (!streakConfigs.isEmpty()) {
+            // RewardConfig에서 threshold 매칭
+            for (RewardConfig config : streakConfigs) {
+                if (config.getThreshold() != null && config.getThreshold() == newStreakCount) {
+                    streakBonusGrams = config.getAmount();
+                    streakBonusEarned = true;
+                    break;
+                }
+            }
+        } else {
+            // RewardConfig 없으면 기본값 사용
+            for (int[] bonus : DEFAULT_STREAK_BONUSES) {
+                if (bonus[0] == newStreakCount) {
+                    streakBonusGrams = bonus[1];
+                    streakBonusEarned = true;
+                    break;
+                }
+            }
+        }
+
+        if (streakBonusEarned) {
+            addPointsToUser(user, streakBonusGrams, PieceTransactionType.REWARD_STREAK_ATTENDANCE, null);
+
+            RewardHistory bonusHistory = new RewardHistory(
+                    userId, RewardType.ATTENDANCE_STREAK, streakBonusGrams, RewardStatus.SUCCESS, null);
+            rewardHistoryRepository.save(bonusHistory);
+        }
+
+        // 출석 기록 저장
+        UserAttendance attendance = new UserAttendance(userId, today, newStreakCount, false);
+        userAttendanceRepository.save(attendance);
+
+        log.info("출석 완료: userId={}, streak={}, earned={}g, bonus={}g",
+                userId, newStreakCount, earnedGrams, streakBonusGrams);
+
+        return AttendanceDto.checkResponse.builder()
+                .earnedGrams(earnedGrams)
+                .streakCount(newStreakCount)
+                .streakBonusEarned(streakBonusEarned)
+                .streakBonusGrams(streakBonusGrams)
+                .build();
+    }
+
+    @Override
+    public AttendanceDto.statusResponse getStatus(String socialId) {
+        UserB user = findUser(socialId);
+        Long userId = user.getId();
+        LocalDate today = LocalDate.now();
+
+        // 오늘 출석 여부
+        boolean attendedToday = userAttendanceRepository
+                .findByUserIdAndAttendanceDate(userId, today).isPresent();
+
+        // 현재 스트릭
+        int currentStreak = 0;
+        if (attendedToday) {
+            Optional<UserAttendance> todayRecord =
+                    userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today);
+            currentStreak = todayRecord.map(UserAttendance::getStreakCount).orElse(0);
+        } else {
+            // 어제 출석했으면 어제의 streak + 1이 잠재 스트릭
+            Optional<UserAttendance> yesterdayRecord =
+                    userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today.minusDays(1));
+            currentStreak = yesterdayRecord.map(UserAttendance::getStreakCount).orElse(0);
+        }
+
+        // 이번 달 출석 목록
+        LocalDate monthStart = today.withDayOfMonth(1);
+        LocalDate monthEnd = today.withDayOfMonth(today.lengthOfMonth());
+        List<LocalDate> monthAttendance =
+                userAttendanceRepository.findAttendanceDatesInMonth(userId, monthStart, monthEnd);
+
+        // 다음 보너스 목록
+        List<AttendanceDto.streakBonusInfo> nextBonuses = buildNextBonuses(currentStreak);
+
+        return AttendanceDto.statusResponse.builder()
+                .attendedToday(attendedToday)
+                .currentStreak(currentStreak)
+                .monthAttendance(monthAttendance)
+                .nextBonuses(nextBonuses)
+                .build();
+    }
+
+    // === private helpers ===
+
+    private UserB findUser(String socialId) {
+        return userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+    }
+
+    private void addPointsToUser(UserB user, int amount, PieceTransactionType txType, Long referenceId) {
+        Piece piece = pieceRepository.findByUser(user)
+                .orElseGet(() -> pieceRepository.save(new Piece(user)));
+
+        piece.addReward((long) amount);
+        pieceRepository.save(piece);
+
+        PieceTransaction tx = PieceTransaction.builder()
+                .user(user)
+                .amount((long) amount)
+                .type(txType)
+                .referenceId(referenceId)
+                .build();
+        pieceTransactionRepository.save(tx);
+    }
+
+    /** 확률 기반 금액 결정 (나만그래 패턴) */
+    private int determineAmount(RewardType rewardType) {
+        List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(rewardType);
+
+        if (configs.isEmpty()) {
+            return 1; // 설정 없으면 기본 1g
+        }
+
+        // 고정 금액이면 바로 반환
+        if (configs.size() == 1 && Boolean.TRUE.equals(configs.get(0).getIsFixed())) {
+            return configs.get(0).getAmount();
+        }
+
+        // 확률 기반 결정
+        int rand = random.nextInt(100);
+        int cumulative = 0;
+        for (RewardConfig config : configs) {
+            cumulative += config.getProbability();
+            if (rand < cumulative) {
+                return config.getAmount();
+            }
+        }
+        return configs.get(configs.size() - 1).getAmount();
+    }
+
+    private List<AttendanceDto.streakBonusInfo> buildNextBonuses(int currentStreak) {
+        List<AttendanceDto.streakBonusInfo> bonuses = new ArrayList<>();
+        List<RewardConfig> streakConfigs =
+                rewardConfigRepository.findActiveConfigs(RewardType.ATTENDANCE_STREAK);
+
+        if (!streakConfigs.isEmpty()) {
+            for (RewardConfig config : streakConfigs) {
+                if (config.getThreshold() != null) {
+                    bonuses.add(AttendanceDto.streakBonusInfo.builder()
+                            .requiredDays(config.getThreshold())
+                            .bonusGrams(config.getAmount())
+                            .achieved(currentStreak >= config.getThreshold())
+                            .build());
+                }
+            }
+        } else {
+            for (int[] bonus : DEFAULT_STREAK_BONUSES) {
+                bonuses.add(AttendanceDto.streakBonusInfo.builder()
+                        .requiredDays(bonus[0])
+                        .bonusGrams(bonus[1])
+                        .achieved(currentStreak >= bonus[0])
+                        .build());
+            }
+        }
+
+        return bonuses;
+    }
+}

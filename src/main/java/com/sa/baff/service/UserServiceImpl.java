@@ -219,8 +219,8 @@ public class UserServiceImpl implements UserService {
                     return newUser;
                 });
 
-        // 5. JWT 생성
-        return jwtProvider.create(user.getSocialId());
+        // 5. JWT 생성 (role 포함)
+        return jwtProvider.create(user.getSocialId(), user.getRole().name());
     }
 
     @Override

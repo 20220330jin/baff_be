@@ -35,7 +35,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         System.out.println("=============Success Handler============");
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         String userId = oAuth2User.getName();
-        String token = jwtProvider.create(userId);
+        // role 조회 후 JWT에 포함
+        String role = userRepository.findBySocialId(userId)
+                .map(u -> u.getRole().name())
+                .orElse("USER");
+        String token = jwtProvider.create(userId, role);
 
         String userAgent = request.getHeader("User-Agent");
         saveLoginHistory(userId, userAgent);

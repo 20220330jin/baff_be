@@ -34,6 +34,8 @@ public class PieceServiceImpl implements PieceService {
         Piece piece = getOrCreatePiece(user);
         return PieceDto.balanceResponse.builder()
                 .balance(piece.getBalance())
+                .totalEarned(piece.getTotalEarned())
+                .totalExchanged(piece.getTotalExchanged())
                 .build();
     }
 
@@ -142,10 +144,18 @@ public class PieceServiceImpl implements PieceService {
     private String getDescription(PieceTransaction tx) {
         String roomName = tx.getBattleRoom() != null ? tx.getBattleRoom().getName() : "";
         return switch (tx.getType()) {
-            case DEPOSIT -> "조각 지급";
+            case DEPOSIT -> "지급";
             case BET_DEDUCT -> "배틀 내기 참여 - " + roomName;
             case BET_WIN -> "배틀 승리 보상 - " + roomName;
             case BET_REFUND -> "배틀 내기 환불 - " + roomName;
+            case REWARD_WEIGHT_LOG -> "체중 기록 리워드";
+            case REWARD_REVIEW -> "리뷰 작성 리워드";
+            case REWARD_ATTENDANCE -> "출석 리워드";
+            case REWARD_STREAK_ATTENDANCE -> "연속 출석 보너스";
+            case REWARD_AD_BONUS -> "광고 보너스";
+            case EXCHANGE_REQUEST -> "환전 요청";
+            case EXCHANGE_SUCCESS -> "환전 완료";
+            case EXCHANGE_FAILED_REFUND -> "환전 실패 환불";
         };
     }
 }

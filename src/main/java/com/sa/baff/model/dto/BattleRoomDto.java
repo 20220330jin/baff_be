@@ -53,6 +53,7 @@ public class BattleRoomDto {
             private LocalDate endDate;
             private String entryCode;
             private Long hostId;
+            private Long betAmount;
             private List<ParticipantInfo> participants;
         }
 
@@ -126,6 +127,16 @@ public class BattleRoomDto {
         private String roomName;
         private String entryCode;
         private String inviterNickname;
+        private InviteStatus status;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    public static class SentInviteInfo {
+        private Long inviteId;
+        private String inviteeNickname;
+        private Long inviteeUserId;
         private InviteStatus status;
     }
 

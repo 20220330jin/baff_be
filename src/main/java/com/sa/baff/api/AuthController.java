@@ -70,7 +70,7 @@ public class AuthController {
             String userId = googleUserId; // 백엔드에서 관리할 사용자 ID 형식 (예시)
 
             // 3. 백엔드-issued JWT 생성
-            String backendJwt = jwtProvider.create(user.getSocialId());
+            String backendJwt = jwtProvider.create(user.getSocialId(), user.getRole().name());
 
             System.out.println("Google Mobile Login Success: " + email + ", " + name + ", " + userId);
             System.out.println("Generated Backend JWT: " + backendJwt);

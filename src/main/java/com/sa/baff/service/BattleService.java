@@ -89,22 +89,22 @@ public interface BattleService {
     BattleRoomDto.getBattleDetailForReview getBattleDetailForReview(String entryCode, String socialId);
 
     /**
-     * 배틀 방에 유저를 초대
+     * [토스] 배틀 방에 유저를 초대 (토스 미니앱에서는 코드 참가 대신 초대 방식 사용)
      */
     void inviteUser(String entryCode, Long inviteeUserId, String socialId);
 
     /**
-     * 내가 받은 초대 목록 조회
+     * [토스] 내가 받은 초대 목록 조회
      */
     List<BattleRoomDto.InviteInfo> getMyInvites(String socialId);
 
     /**
-     * 초대 수락
+     * [토스] 초대 수락
      */
     void acceptInvite(Long inviteId, String socialId);
 
     /**
-     * 초대 거절
+     * [토스] 초대 거절
      */
     void declineInvite(Long inviteId, String socialId);
 
@@ -112,4 +112,14 @@ public interface BattleService {
      * 배틀 방 내기 금액 설정
      */
     void setBetAmount(String entryCode, Long betAmount, String socialId);
+
+    /**
+     * [토스] 초대 취소 (초대를 보낸 사람만 가능)
+     */
+    void cancelInvite(Long inviteId, String socialId);
+
+    /**
+     * [토스] 특정 방에서 내가 보낸 초대 목록 조회
+     */
+    List<BattleRoomDto.SentInviteInfo> getSentInvites(String entryCode, String socialId);
 }

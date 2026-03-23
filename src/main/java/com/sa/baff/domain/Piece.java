@@ -23,9 +23,17 @@ public class Piece extends BaseEntity {
     @Column(nullable = false)
     private Long balance = 0L;
 
+    @Column(nullable = false)
+    private Long totalEarned = 0L;
+
+    @Column(nullable = false)
+    private Long totalExchanged = 0L;
+
     public Piece(UserB user) {
         this.user = user;
         this.balance = 0L;
+        this.totalEarned = 0L;
+        this.totalExchanged = 0L;
     }
 
     public void addBalance(Long amount) {
@@ -37,5 +45,20 @@ public class Piece extends BaseEntity {
             throw new IllegalStateException("조각이 부족합니다.");
         }
         this.balance -= amount;
+    }
+
+    /** 리워드 적립 (잔액 + 총적립 동시 증가) */
+    public void addReward(Long amount) {
+        this.balance += amount;
+        this.totalEarned += amount;
+    }
+
+    /** 환전 차감 (잔액 감소 + 총환전 증가) */
+    public void deductForExchange(Long amount) {
+        if (this.balance < amount) {
+            throw new IllegalStateException("그램이 부족해요.");
+        }
+        this.balance -= amount;
+        this.totalExchanged += amount;
     }
 }

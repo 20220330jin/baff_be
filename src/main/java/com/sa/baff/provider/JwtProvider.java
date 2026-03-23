@@ -20,41 +20,59 @@ public class JwtProvider {
     private String secretKey;
 
     /**
-     * JWT 생성
-     * @param userId
-     * @return
+     * JWT 생성 (role 포함)
      */
-    public String create(String userId){
+    public String create(String userId, String role) {
         Date expireDate = Date.from(Instant.now().plus(7, ChronoUnit.DAYS));
         Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
 
-        String jwt = Jwts.builder()
+        return Jwts.builder()
                 .signWith(key, SignatureAlgorithm.HS256)
-                .setSubject(userId).setIssuedAt(new Date()).setExpiration(expireDate)
+                .setSubject(userId)
+                .claim("role", role)
+                .setIssuedAt(new Date())
+                .setExpiration(expireDate)
                 .compact();
-
-        return jwt;
     }
 
     /**
-     * JWT 검증
+     * JWT 생성 (하위 호환 — role 미지정 시 USER)
      */
-    public String validate(String jwt){
-        Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-        String subject = null;
+    public String create(String userId) {
+        return create(userId, "USER");
+    }
 
+    /**
+     * JWT 검증 — userId(subject) 반환
+     */
+    public String validate(String jwt) {
+        Claims claims = getClaims(jwt);
+        return claims != null ? claims.getSubject() : null;
+    }
+
+    /**
+     * JWT에서 role 클레임 추출
+     */
+    public String getRole(String jwt) {
+        Claims claims = getClaims(jwt);
+        if (claims == null) return null;
+        return claims.get("role", String.class);
+    }
+
+    /**
+     * JWT Claims 파싱
+     */
+    private Claims getClaims(String jwt) {
+        Key key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
         try {
-            Claims claims = Jwts.parserBuilder()
+            return Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
                     .parseClaimsJws(jwt)
                     .getBody();
-            subject = claims.getSubject();
-        }catch (Exception exception){
+        } catch (Exception exception) {
             exception.printStackTrace();
-
             return null;
         }
-        return subject;
     }
 }

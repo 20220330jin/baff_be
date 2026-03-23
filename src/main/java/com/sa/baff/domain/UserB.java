@@ -1,5 +1,6 @@
 package com.sa.baff.domain;
 
+import com.sa.baff.domain.type.UserStatus;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -42,6 +43,10 @@ public class UserB extends BaseEntity {
     private String provider;
 
     private String platform;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private UserStatus status = UserStatus.ACTIVE;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Goals> goals = new ArrayList<>();

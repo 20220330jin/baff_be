@@ -9,6 +9,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @NoArgsConstructor(access =  AccessLevel.PROTECTED)
 @Table(name = "inquiry")
@@ -44,6 +47,9 @@ public class Inquiry extends BaseEntity {
     @Column(nullable = false)
     private AdminSyncStatus adminSyncStatus;
 
+    @OneToMany(mappedBy = "inquiry", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<InquiryReply> replies = new ArrayList<>();
+
     @Builder
     public Inquiry(String title, String content, UserB user, InquiryStatus status, InquiryType inquiryType) {
         this.title = title;
@@ -54,11 +60,15 @@ public class Inquiry extends BaseEntity {
         this.adminSyncStatus = AdminSyncStatus.PENDING;
     }
 
-    /**
-     * 어드민 서버 연동 상태를 업데이트하는 메서드
-     * @param adminSyncStatus 새로운 연동 상태
-     */
     public void updateAdminSyncStatus(AdminSyncStatus adminSyncStatus) {
         this.adminSyncStatus = adminSyncStatus;
+    }
+
+    public void updateStatus(InquiryStatus status) {
+        this.status = status;
+    }
+
+    public void addReply(InquiryReply reply) {
+        this.replies.add(reply);
     }
 }
