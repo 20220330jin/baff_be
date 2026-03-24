@@ -40,4 +40,13 @@ public interface AdminDashboardService {
     AdminDashboardDto.NoticeItem createNotice(String title, String content);
     AdminDashboardDto.NoticeItem updateNotice(Long noticeId, String title, String content, Boolean isActive);
     void deleteNotice(Long noticeId);
+
+    // === 리워드 관리 ===
+    AdminDashboardDto.AdminRewardSummary getRewardSummary();
+    Page<AdminDashboardDto.AdminRewardConfigItem> getRewardConfigs(Pageable pageable);
+    Page<AdminDashboardDto.AdminExchangeItem> getRewardExchanges(Pageable pageable);
+
+    // === 내역 관리 ===
+    Page<AdminDashboardDto.LoginHistoryItem> getLoginHistories(Pageable pageable);
+    Page<AdminDashboardDto.WeightHistoryItem> getWeightHistories(Pageable pageable);
 }

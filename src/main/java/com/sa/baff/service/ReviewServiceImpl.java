@@ -217,6 +217,6 @@ public class ReviewServiceImpl implements ReviewService{
 
         // Primitive boolean (요청에 없어도 false가 들어와 기존 true 값이 false로 덮어쓰여질 수 있습니다!)
         reviewToUpdate.setWeightPrivate(param.isWeightPrivate());
-        reviewToUpdate.setPublic(param.isPublic());
+        reviewToUpdate.setIsPublic(param.isPublic());
     }
 }

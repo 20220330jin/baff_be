@@ -40,6 +40,10 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final BattleRoomRepository battleRoomRepository;
     private final NoticeRepository noticeRepository;
     private final PieceRepository pieceRepository;
+    private final LoginHistoryRepository loginHistoryRepository;
+    private final RewardConfigRepository rewardConfigRepository;
+    private final RewardHistoryRepository rewardHistoryRepository;
+    private final ExchangeHistoryRepository exchangeHistoryRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -563,7 +567,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     public void updateReviewVisibility(Long reviewId, boolean isPublic) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new EntityNotFoundException("리뷰를 찾을 수 없습니다. id=" + reviewId));
-        review.setPublic(isPublic);
+        review.setIsPublic(isPublic);
         reviewRepository.save(review);
     }
 
@@ -671,7 +675,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 .authorNickname(review.getUser() != null ? review.getUser().getNickname() : null)
                 .difficulty(review.getDifficulty())
                 .dietMethods(review.getDietMethods())
-                .isPublic(review.isPublic())
+                .isPublic(Boolean.TRUE.equals(review.getIsPublic()))
                 .likes(review.getLikes() != null ? review.getLikes() : 0L)
                 .commentCount(review.getCommentCount() != null ? review.getCommentCount() : 0L)
                 .regDateTime(review.getRegDateTime() != null ? review.getRegDateTime().format(DATETIME_FORMATTER) : null)
@@ -687,5 +691,128 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                 .regDateTime(notice.getRegDateTime() != null ? notice.getRegDateTime().format(DATETIME_FORMATTER) : null)
                 .modDateTime(notice.getModDateTime() != null ? notice.getModDateTime().format(DATETIME_FORMATTER) : null)
                 .build();
+    }
+
+    // ==================== 리워드 관리 ====================
+
+    @Override
+    public AdminDashboardDto.AdminRewardSummary getRewardSummary() {
+        List<Piece> allPieces = pieceRepository.findAll();
+        long totalEarned = allPieces.stream().mapToLong(Piece::getTotalEarned).sum();
+        long totalExchanged = allPieces.stream().mapToLong(Piece::getTotalExchanged).sum();
+        long currentBalance = allPieces.stream().mapToLong(Piece::getBalance).sum();
+        long activeUsers = allPieces.stream().filter(p -> p.getBalance() > 0 || p.getTotalEarned() > 0).count();
+
+        List<ExchangeHistory> allExchanges = exchangeHistoryRepository.findAll();
+        long totalExchangeAmount = allExchanges.stream()
+                .filter(e -> "SUCCESS".equals(e.getStatus().name()))
+                .mapToLong(ExchangeHistory::getTossAmount)
+                .sum();
+        long pendingExchanges = allExchanges.stream()
+                .filter(e -> "PENDING".equals(e.getStatus().name()))
+                .count();
+
+        LocalDate today = LocalDate.now();
+        List<RewardHistory> allRewards = rewardHistoryRepository.findAll();
+        long todayIssued = allRewards.stream()
+                .filter(r -> r.getRegDateTime() != null && r.getRegDateTime().toLocalDate().equals(today))
+                .filter(r -> "SUCCESS".equals(r.getStatus().name()))
+                .mapToLong(RewardHistory::getAmount)
+                .sum();
+
+        return AdminDashboardDto.AdminRewardSummary.builder()
+                .totalIssuedPieces(totalEarned)
+                .totalBurnedPieces(totalExchanged)
+                .currentCirculating(currentBalance)
+                .totalExchangeAmount(totalExchangeAmount)
+                .todayIssuedPieces(todayIssued)
+                .todayBurnedPieces(0)
+                .activeRewardUsers(activeUsers)
+                .pendingExchanges(pendingExchanges)
+                .build();
+    }
+
+    @Override
+    public Page<AdminDashboardDto.AdminRewardConfigItem> getRewardConfigs(Pageable pageable) {
+        List<RewardConfig> configs = rewardConfigRepository.findAll();
+        List<AdminDashboardDto.AdminRewardConfigItem> items = configs.stream()
+                .map(c -> AdminDashboardDto.AdminRewardConfigItem.builder()
+                        .configId(c.getId())
+                        .rewardType(c.getRewardType() != null ? c.getRewardType().name() : null)
+                        .actionType(c.getRewardType() != null ? c.getRewardType().name() : null)
+                        .pieceAmount(c.getAmount())
+                        .description(c.getDescription())
+                        .isActive(Boolean.TRUE.equals(c.getEnabled()))
+                        .regDateTime(c.getRegDateTime() != null ? c.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .modDateTime(c.getModDateTime() != null ? c.getModDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), items.size());
+        return new PageImpl<>(start < items.size() ? items.subList(start, end) : List.of(), pageable, items.size());
+    }
+
+    @Override
+    public Page<AdminDashboardDto.AdminExchangeItem> getRewardExchanges(Pageable pageable) {
+        List<ExchangeHistory> allExchanges = exchangeHistoryRepository.findAll();
+        allExchanges.sort((a, b) -> b.getRegDateTime().compareTo(a.getRegDateTime()));
+
+        Set<Long> userIds = allExchanges.stream().map(ExchangeHistory::getUserId).collect(Collectors.toSet());
+        Map<Long, String> nicknameMap = buildNicknameMap(userIds);
+
+        List<AdminDashboardDto.AdminExchangeItem> items = allExchanges.stream()
+                .map(e -> AdminDashboardDto.AdminExchangeItem.builder()
+                        .exchangeId(e.getId())
+                        .userId(e.getUserId())
+                        .nickname(nicknameMap.getOrDefault(e.getUserId(), "-"))
+                        .pieceAmount(e.getPointAmount())
+                        .exchangeAmount(e.getTossAmount())
+                        .status(e.getStatus() != null ? e.getStatus().name() : null)
+                        .regDateTime(e.getRegDateTime() != null ? e.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), items.size());
+        return new PageImpl<>(start < items.size() ? items.subList(start, end) : List.of(), pageable, items.size());
+    }
+
+    // ==================== 내역 관리 ====================
+
+    @Override
+    public Page<AdminDashboardDto.LoginHistoryItem> getLoginHistories(Pageable pageable) {
+        Page<LoginHistory> page = loginHistoryRepository.findAll(pageable);
+        List<AdminDashboardDto.LoginHistoryItem> items = page.getContent().stream()
+                .map(lh -> AdminDashboardDto.LoginHistoryItem.builder()
+                        .id(lh.getId())
+                        .userId(lh.getUser() != null ? lh.getUser().getId() : null)
+                        .nickname(lh.getUser() != null ? lh.getUser().getNickname() : "-")
+                        .userAgent(lh.getRawUserAgent())
+                        .loginDateTime(lh.getRegDateTime() != null ? lh.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+        return new PageImpl<>(items, pageable, page.getTotalElements());
+    }
+
+    @Override
+    public Page<AdminDashboardDto.WeightHistoryItem> getWeightHistories(Pageable pageable) {
+        Page<Weight> page = weightRepository.findAll(pageable);
+        List<AdminDashboardDto.WeightHistoryItem> items = page.getContent().stream()
+                .map(w -> AdminDashboardDto.WeightHistoryItem.builder()
+                        .id(w.getId())
+                        .userId(w.getUser() != null ? w.getUser().getId() : null)
+                        .nickname(w.getUser() != null ? w.getUser().getNickname() : "-")
+                        .weight(w.getWeight())
+                        .recordDate(w.getRecordDate() != null ? w.getRecordDate().format(DATETIME_FORMATTER) : null)
+                        .regDateTime(w.getRegDateTime() != null ? w.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+        return new PageImpl<>(items, pageable, page.getTotalElements());
+    }
+
+    /** userId → nickname 맵 빌드 (배치) */
+    private Map<Long, String> buildNicknameMap(Set<Long> userIds) {
+        if (userIds.isEmpty()) return Map.of();
+        List<UserB> users = (List<UserB>) userRepository.findAllByIdIn(new ArrayList<>(userIds));
+        return users.stream().collect(Collectors.toMap(UserB::getId, u -> u.getNickname() != null ? u.getNickname() : "-"));
     }
 }

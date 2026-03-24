@@ -190,4 +190,77 @@ public class AdminDashboardDto {
         private String regDateTime;
         private String modDateTime;
     }
+
+    // ===== 리워드 관리 =====
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdminRewardSummary {
+        private long totalIssuedPieces;
+        private long totalBurnedPieces;
+        private long currentCirculating;
+        private long totalExchangeAmount;
+        private long todayIssuedPieces;
+        private long todayBurnedPieces;
+        private long activeRewardUsers;
+        private long pendingExchanges;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdminRewardConfigItem {
+        private Long configId;
+        private String rewardType;
+        private String actionType;
+        private long pieceAmount;
+        private String description;
+        private boolean isActive;
+        private String regDateTime;
+        private String modDateTime;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdminExchangeItem {
+        private Long exchangeId;
+        private Long userId;
+        private String nickname;
+        private long pieceAmount;
+        private long exchangeAmount;
+        private String status;
+        private String regDateTime;
+    }
+
+    // ===== 내역 관리 =====
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LoginHistoryItem {
+        private Long id;
+        private Long userId;
+        private String nickname;
+        private String userAgent;
+        private String loginDateTime;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class WeightHistoryItem {
+        private Long id;
+        private Long userId;
+        private String nickname;
+        private Double weight;
+        private String recordDate;
+        private String regDateTime;
+    }
 }

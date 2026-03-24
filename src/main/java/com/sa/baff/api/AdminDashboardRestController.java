@@ -308,4 +308,41 @@ public class AdminDashboardRestController {
         adminDashboardService.deleteNotice(id);
         return ResponseEntity.ok().build();
     }
+
+    // ==================== 리워드/조각 관리 ====================
+
+    @GetMapping("/rewards/summary")
+    public ResponseEntity<AdminDashboardDto.AdminRewardSummary> getRewardSummary() {
+        return ResponseEntity.ok(adminDashboardService.getRewardSummary());
+    }
+
+    @GetMapping("/rewards/configs")
+    public ResponseEntity<Page<AdminDashboardDto.AdminRewardConfigItem>> getRewardConfigs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminDashboardService.getRewardConfigs(PageRequest.of(page, size)));
+    }
+
+    @GetMapping("/rewards/exchanges")
+    public ResponseEntity<Page<AdminDashboardDto.AdminExchangeItem>> getRewardExchanges(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminDashboardService.getRewardExchanges(PageRequest.of(page, size)));
+    }
+
+    // ==================== 내역 관리 ====================
+
+    @GetMapping("/history/logins")
+    public ResponseEntity<Page<AdminDashboardDto.LoginHistoryItem>> getLoginHistories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminDashboardService.getLoginHistories(PageRequest.of(page, size)));
+    }
+
+    @GetMapping("/history/weights")
+    public ResponseEntity<Page<AdminDashboardDto.WeightHistoryItem>> getWeightHistories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminDashboardService.getWeightHistories(PageRequest.of(page, size)));
+    }
 }
