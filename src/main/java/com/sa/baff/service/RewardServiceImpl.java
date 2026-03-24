@@ -95,6 +95,31 @@ public class RewardServiceImpl implements RewardService {
     }
 
     @Override
+    public RewardDto.rewardResponse grantWeightAdBonus(String socialId, Long weightId) {
+        UserB user = findUser(socialId);
+        Long userId = user.getId();
+
+        checkDailyLimit(userId, RewardType.WEIGHT_AD_BONUS);
+
+        int earnedGrams = determineAmount(RewardType.WEIGHT_AD_BONUS);
+
+        addPointsToUser(user, earnedGrams, PieceTransactionType.REWARD_WEIGHT_LOG, weightId);
+
+        RewardHistory history = new RewardHistory(
+                userId, RewardType.WEIGHT_AD_BONUS, earnedGrams, RewardStatus.SUCCESS, weightId);
+        rewardHistoryRepository.save(history);
+
+        incrementDaily(userId, RewardType.WEIGHT_AD_BONUS, earnedGrams);
+
+        log.info("체중 광고 보너스: userId={}, weightId={}, earned={}g", userId, weightId, earnedGrams);
+
+        return RewardDto.rewardResponse.builder()
+                .earnedGrams(earnedGrams)
+                .message(GramConstants.earnMessage(earnedGrams))
+                .build();
+    }
+
+    @Override
     public RewardDto.historyResponse getRewardHistory(String socialId) {
         UserB user = findUser(socialId);
         Long userId = user.getId();
@@ -232,6 +257,7 @@ public class RewardServiceImpl implements RewardService {
             case ATTENDANCE -> "출석";
             case ATTENDANCE_STREAK -> "연속 출석 보너스";
             case ATTENDANCE_AD_BONUS -> "출석 광고 보너스";
+            case WEIGHT_AD_BONUS -> "체중 기록 광고 보너스";
             case STREAK_WEIGHT -> "체중 기록 스트릭";
             case GOAL_ACHIEVED -> "목표 달성";
             case BATTLE_COMPLETE -> "배틀 완료";

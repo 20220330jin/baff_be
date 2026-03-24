@@ -1,7 +1,10 @@
 package com.sa.baff.api;
 
+import com.sa.baff.domain.RewardConfig;
 import com.sa.baff.model.dto.AdminDashboardDto;
+import com.sa.baff.repository.RewardConfigRepository;
 import com.sa.baff.service.AdminDashboardService;
+import com.sa.baff.util.RewardType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +29,7 @@ import java.util.Map;
 public class AdminDashboardRestController {
 
     private final AdminDashboardService adminDashboardService;
+    private final RewardConfigRepository rewardConfigRepository;
 
     // ==================== 대시보드 개요 ====================
 
@@ -322,6 +326,39 @@ public class AdminDashboardRestController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(adminDashboardService.getRewardConfigs(PageRequest.of(page, size)));
+    }
+
+    @PostMapping("/rewards/configs")
+    public ResponseEntity<Map<String, Object>> createRewardConfig(@RequestBody Map<String, Object> body) {
+        String rewardType = (String) body.get("rewardType");
+        Integer amount = (Integer) body.get("amount");
+        Integer dailyLimit = (Integer) body.get("dailyLimit");
+        String description = (String) body.get("description");
+        Boolean enabled = body.get("enabled") != null ? (Boolean) body.get("enabled") : true;
+
+        RewardConfig config = new RewardConfig();
+        config.setRewardType(RewardType.valueOf(rewardType));
+        config.setAmount(amount != null ? amount : 1);
+        config.setDailyLimit(dailyLimit);
+        config.setDescription(description);
+        config.setEnabled(enabled);
+        config.setProbability(100);
+        config.setIsFixed(true);
+
+        rewardConfigRepository.save(config);
+        return ResponseEntity.ok(Map.of("id", config.getId(), "message", "설정이 추가되었습니다."));
+    }
+
+    @PutMapping("/rewards/configs/{id}")
+    public ResponseEntity<Map<String, String>> updateRewardConfig(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        RewardConfig config = rewardConfigRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("설정을 찾을 수 없습니다."));
+        if (body.containsKey("amount")) config.setAmount((Integer) body.get("amount"));
+        if (body.containsKey("dailyLimit")) config.setDailyLimit((Integer) body.get("dailyLimit"));
+        if (body.containsKey("description")) config.setDescription((String) body.get("description"));
+        if (body.containsKey("enabled")) config.setEnabled((Boolean) body.get("enabled"));
+        rewardConfigRepository.save(config);
+        return ResponseEntity.ok(Map.of("message", "설정이 수정되었습니다."));
     }
 
     @GetMapping("/rewards/exchanges")

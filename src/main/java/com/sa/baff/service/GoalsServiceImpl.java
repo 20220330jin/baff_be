@@ -38,7 +38,7 @@ public class GoalsServiceImpl implements GoalsService {
         Goals goals = Goals.builder()
                 .title(recordGoalsParam.getTitle())
                 .startDate(startDate)
-                .endDate(endDate.plusHours(recordGoalsParam.getPresetDuration()))
+                .endDate(endDate.plusDays(recordGoalsParam.getPresetDuration()))
                 .startWeight(recordGoalsParam.getStartWeight())
                 .targetWeight(recordGoalsParam.getTargetWeight())
                 .user(user)

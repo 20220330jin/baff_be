@@ -9,6 +9,7 @@ import com.sa.baff.model.vo.UserVO;
 import com.sa.baff.provider.JwtProvider;
 import com.sa.baff.repository.*;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -248,7 +249,17 @@ public class UserServiceImpl implements UserService {
             log.info("Toss token 응답: {}", rawResponse);
 
             ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(rawResponse, TokenResponse.class);
+            TokenResponse tokenResponse = objectMapper.readValue(rawResponse, TokenResponse.class);
+
+            if (!"SUCCESS".equals(tokenResponse.getResultType())) {
+                String errorDetail = tokenResponse.getError() != null
+                        ? tokenResponse.getError().getErrorCode() + ": " + tokenResponse.getError().getReason()
+                        : "unknown";
+                log.error("Toss token 발급 실패: resultType={}, error={}", tokenResponse.getResultType(), errorDetail);
+                throw new RuntimeException("Toss token 발급 실패: " + errorDetail);
+            }
+
+            return tokenResponse;
 
         } catch (WebClientResponseException e) {
             log.error("Toss token API 에러: Status={}, Body={}", e.getStatusCode(), e.getResponseBodyAsString());
@@ -328,9 +339,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private static class TokenResponse {
         private String resultType;
         private SuccessResponse success;
+        private ErrorResponse error;
+    }
+
+    @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private static class ErrorResponse {
+        private String errorCode;
+        private String reason;
     }
 
     @Getter
@@ -343,9 +363,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Getter
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private static class TossUserInfoResponse {
         private String resultType;
         private UserInfo success;
+        private ErrorResponse error;
     }
 
     @Getter @Setter

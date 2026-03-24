@@ -7,6 +7,7 @@ public enum RewardType {
     ATTENDANCE,              // 출석
     ATTENDANCE_STREAK,       // 연속 출석 보너스
     ATTENDANCE_AD_BONUS,     // 출석 광고 보너스
+    WEIGHT_AD_BONUS,         // 체중 기록 광고 보너스
 
     // Phase 2 (예약)
     STREAK_WEIGHT,           // 체중 기록 스트릭

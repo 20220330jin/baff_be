@@ -893,6 +893,9 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .tossImageAdGroupId(c.getTossImageAdGroupId())
                         .tossImageAdRatio(c.getTossImageAdRatio())
                         .isTossImageAdEnabled(c.getIsTossImageAdEnabled())
+                        .tossBannerAdGroupId(c.getTossBannerAdGroupId())
+                        .tossBannerAdRatio(c.getTossBannerAdRatio())
+                        .isTossBannerAdEnabled(c.getIsTossBannerAdEnabled())
                         .regDateTime(c.getRegDateTime() != null ? c.getRegDateTime().format(DATETIME_FORMATTER) : null)
                         .modDateTime(c.getModDateTime() != null ? c.getModDateTime().format(DATETIME_FORMATTER) : null)
                         .build())
@@ -916,6 +919,9 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (request.getTossImageAdGroupId() != null) config.setTossImageAdGroupId(request.getTossImageAdGroupId());
         if (request.getTossImageAdRatio() != null) config.setTossImageAdRatio(request.getTossImageAdRatio());
         if (request.getIsTossImageAdEnabled() != null) config.setIsTossImageAdEnabled(request.getIsTossImageAdEnabled());
+        if (request.getTossBannerAdGroupId() != null) config.setTossBannerAdGroupId(request.getTossBannerAdGroupId());
+        if (request.getTossBannerAdRatio() != null) config.setTossBannerAdRatio(request.getTossBannerAdRatio());
+        if (request.getIsTossBannerAdEnabled() != null) config.setIsTossBannerAdEnabled(request.getIsTossBannerAdEnabled());
 
         adPositionConfigRepository.save(config);
     }

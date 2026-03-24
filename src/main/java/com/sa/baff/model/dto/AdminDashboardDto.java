@@ -316,6 +316,9 @@ public class AdminDashboardDto {
         private String tossImageAdGroupId;
         private Integer tossImageAdRatio;
         private Boolean isTossImageAdEnabled;
+        private String tossBannerAdGroupId;
+        private Integer tossBannerAdRatio;
+        private Boolean isTossBannerAdEnabled;
         private String regDateTime;
         private String modDateTime;
     }
@@ -330,5 +333,8 @@ public class AdminDashboardDto {
         private String tossImageAdGroupId;
         private Integer tossImageAdRatio;
         private Boolean isTossImageAdEnabled;
+        private String tossBannerAdGroupId;
+        private Integer tossBannerAdRatio;
+        private Boolean isTossBannerAdEnabled;
     }
 }

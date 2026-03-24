@@ -25,6 +25,14 @@ public class RewardRestController {
         return rewardService.grantWeightReward(socialId, weightId);
     }
 
+    /** 체중 기록 광고 보너스 리워드 지급 */
+    @PostMapping("/weight-ad-bonus")
+    public RewardDto.rewardResponse grantWeightAdBonus(
+            @AuthenticationPrincipal String socialId,
+            @RequestParam Long weightId) {
+        return rewardService.grantWeightAdBonus(socialId, weightId);
+    }
+
     /** 리뷰 작성 리워드 지급 */
     @PostMapping("/review")
     public RewardDto.rewardResponse grantReviewReward(
