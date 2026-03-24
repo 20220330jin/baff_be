@@ -263,4 +263,41 @@ public class AdminDashboardDto {
         private String recordDate;
         private String regDateTime;
     }
+
+    // ===== 광고 시청 관리 =====
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdWatchSummary {
+        private long totalWatchCount;
+        private long todayWatchCount;
+        private long uniqueUsers;
+        private long todayUniqueUsers;
+        private List<AdWatchLocationStat> locationStats;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdWatchLocationStat {
+        private String location;
+        private long count;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AdWatchHistoryItem {
+        private Long id;
+        private Long userId;
+        private String nickname;
+        private String watchLocation;
+        private Long referenceId;
+        private String tossAdResponse;
+        private String regDateTime;
+    }
 }

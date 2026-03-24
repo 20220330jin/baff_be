@@ -49,4 +49,8 @@ public interface AdminDashboardService {
     // === 내역 관리 ===
     Page<AdminDashboardDto.LoginHistoryItem> getLoginHistories(Pageable pageable);
     Page<AdminDashboardDto.WeightHistoryItem> getWeightHistories(Pageable pageable);
+
+    // === 광고 시청 관리 ===
+    AdminDashboardDto.AdWatchSummary getAdWatchSummary();
+    Page<AdminDashboardDto.AdWatchHistoryItem> getAdWatchHistory(Pageable pageable);
 }

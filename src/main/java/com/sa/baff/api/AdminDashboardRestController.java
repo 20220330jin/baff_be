@@ -345,4 +345,18 @@ public class AdminDashboardRestController {
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(adminDashboardService.getWeightHistories(PageRequest.of(page, size)));
     }
+
+    // ==================== 광고 시청 관리 ====================
+
+    @GetMapping("/ad-watch/summary")
+    public ResponseEntity<AdminDashboardDto.AdWatchSummary> getAdWatchSummary() {
+        return ResponseEntity.ok(adminDashboardService.getAdWatchSummary());
+    }
+
+    @GetMapping("/ad-watch/history")
+    public ResponseEntity<Page<AdminDashboardDto.AdWatchHistoryItem>> getAdWatchHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminDashboardService.getAdWatchHistory(PageRequest.of(page, size)));
+    }
 }

@@ -44,6 +44,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final RewardConfigRepository rewardConfigRepository;
     private final RewardHistoryRepository rewardHistoryRepository;
     private final ExchangeHistoryRepository exchangeHistoryRepository;
+    private final AdWatchEventRepository adWatchEventRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -814,5 +815,65 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (userIds.isEmpty()) return Map.of();
         List<UserB> users = (List<UserB>) userRepository.findAllByIdIn(new ArrayList<>(userIds));
         return users.stream().collect(Collectors.toMap(UserB::getId, u -> u.getNickname() != null ? u.getNickname() : "-"));
+    }
+
+    // ==================== 광고 시청 관리 ====================
+
+    @Override
+    public AdminDashboardDto.AdWatchSummary getAdWatchSummary() {
+        List<AdWatchEvent> allEvents = adWatchEventRepository.findAll();
+        long total = allEvents.size();
+        long uniqueUsers = allEvents.stream().map(AdWatchEvent::getUserId).distinct().count();
+
+        LocalDate today = LocalDate.now();
+        List<AdWatchEvent> todayEvents = allEvents.stream()
+                .filter(e -> e.getRegDateTime() != null && e.getRegDateTime().toLocalDate().equals(today))
+                .collect(Collectors.toList());
+        long todayCount = todayEvents.size();
+        long todayUnique = todayEvents.stream().map(AdWatchEvent::getUserId).distinct().count();
+
+        Map<String, Long> locationCounts = allEvents.stream()
+                .collect(Collectors.groupingBy(
+                        e -> e.getWatchLocation() != null ? e.getWatchLocation().name() : "UNKNOWN",
+                        Collectors.counting()));
+        List<AdminDashboardDto.AdWatchLocationStat> locationStats = locationCounts.entrySet().stream()
+                .map(entry -> AdminDashboardDto.AdWatchLocationStat.builder()
+                        .location(entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .sorted((a, b) -> Long.compare(b.getCount(), a.getCount()))
+                .collect(Collectors.toList());
+
+        return AdminDashboardDto.AdWatchSummary.builder()
+                .totalWatchCount(total)
+                .todayWatchCount(todayCount)
+                .uniqueUsers(uniqueUsers)
+                .todayUniqueUsers(todayUnique)
+                .locationStats(locationStats)
+                .build();
+    }
+
+    @Override
+    public Page<AdminDashboardDto.AdWatchHistoryItem> getAdWatchHistory(Pageable pageable) {
+        List<AdWatchEvent> allEvents = adWatchEventRepository.findAll();
+        allEvents.sort((a, b) -> b.getRegDateTime().compareTo(a.getRegDateTime()));
+
+        Set<Long> userIds = allEvents.stream().map(AdWatchEvent::getUserId).collect(Collectors.toSet());
+        Map<Long, String> nicknameMap = buildNicknameMap(userIds);
+
+        List<AdminDashboardDto.AdWatchHistoryItem> items = allEvents.stream()
+                .map(e -> AdminDashboardDto.AdWatchHistoryItem.builder()
+                        .id(e.getId())
+                        .userId(e.getUserId())
+                        .nickname(nicknameMap.getOrDefault(e.getUserId(), "-"))
+                        .watchLocation(e.getWatchLocation() != null ? e.getWatchLocation().name() : null)
+                        .referenceId(e.getReferenceId())
+                        .tossAdResponse(e.getTossAdResponse())
+                        .regDateTime(e.getRegDateTime() != null ? e.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), items.size());
+        return new PageImpl<>(start < items.size() ? items.subList(start, end) : List.of(), pageable, items.size());
     }
 }
