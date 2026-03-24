@@ -50,10 +50,10 @@ public class AdPositionConfig extends BaseEntity {
     private String tossBannerAdGroupId;
 
     /** 작은 배너 광고 비율 (0~100%) */
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "integer default 0")
     private Integer tossBannerAdRatio = 0;
 
     /** 작은 배너 광고 활성 여부 */
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean isTossBannerAdEnabled = false;
 }
