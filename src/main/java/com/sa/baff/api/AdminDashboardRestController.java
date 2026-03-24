@@ -362,4 +362,19 @@ public class AdminDashboardRestController {
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(adminDashboardService.getAdWatchHistory(PageRequest.of(page, size)));
     }
+
+    // ==================== 토스광고 설정 ====================
+
+    @GetMapping("/toss-ad/configs")
+    public ResponseEntity<List<AdminDashboardDto.TossAdPositionConfig>> getTossAdConfigs() {
+        return ResponseEntity.ok(adminDashboardService.getTossAdConfigs());
+    }
+
+    @PutMapping("/toss-ad/configs/{position}")
+    public ResponseEntity<Void> updateTossAdConfig(
+            @PathVariable String position,
+            @RequestBody AdminDashboardDto.UpdateTossAdConfigRequest request) {
+        adminDashboardService.updateTossAdConfig(position, request);
+        return ResponseEntity.ok().build();
+    }
 }

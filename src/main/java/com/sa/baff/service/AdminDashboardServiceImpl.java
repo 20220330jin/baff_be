@@ -6,6 +6,7 @@ import com.sa.baff.domain.type.InquiryType;
 import com.sa.baff.domain.type.UserStatus;
 import com.sa.baff.model.dto.AdminDashboardDto;
 import com.sa.baff.repository.*;
+import com.sa.baff.util.AdWatchLocation;
 import com.sa.baff.util.BattleStatus;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.EntityNotFoundException;
@@ -45,6 +46,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final RewardHistoryRepository rewardHistoryRepository;
     private final ExchangeHistoryRepository exchangeHistoryRepository;
     private final AdWatchEventRepository adWatchEventRepository;
+    private final AdPositionConfigRepository adPositionConfigRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -875,5 +877,46 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         int start = (int) pageable.getOffset();
         int end = Math.min(start + pageable.getPageSize(), items.size());
         return new PageImpl<>(start < items.size() ? items.subList(start, end) : List.of(), pageable, items.size());
+    }
+
+    // ==================== 토스광고 설정 ====================
+
+    @Override
+    public List<AdminDashboardDto.TossAdPositionConfig> getTossAdConfigs() {
+        return adPositionConfigRepository.findAll().stream()
+                .map(c -> AdminDashboardDto.TossAdPositionConfig.builder()
+                        .id(c.getId())
+                        .position(c.getPosition().name())
+                        .tossAdRatio(c.getTossAdRatio())
+                        .tossAdGroupId(c.getTossAdGroupId())
+                        .isTossAdEnabled(c.getIsTossAdEnabled())
+                        .tossImageAdGroupId(c.getTossImageAdGroupId())
+                        .tossImageAdRatio(c.getTossImageAdRatio())
+                        .isTossImageAdEnabled(c.getIsTossImageAdEnabled())
+                        .regDateTime(c.getRegDateTime() != null ? c.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .modDateTime(c.getModDateTime() != null ? c.getModDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public void updateTossAdConfig(String position, AdminDashboardDto.UpdateTossAdConfigRequest request) {
+        AdWatchLocation loc = AdWatchLocation.valueOf(position);
+        AdPositionConfig config = adPositionConfigRepository.findByPosition(loc)
+                .orElseGet(() -> {
+                    AdPositionConfig newConfig = new AdPositionConfig();
+                    newConfig.setPosition(loc);
+                    return newConfig;
+                });
+
+        if (request.getTossAdRatio() != null) config.setTossAdRatio(request.getTossAdRatio());
+        if (request.getTossAdGroupId() != null) config.setTossAdGroupId(request.getTossAdGroupId());
+        if (request.getIsTossAdEnabled() != null) config.setIsTossAdEnabled(request.getIsTossAdEnabled());
+        if (request.getTossImageAdGroupId() != null) config.setTossImageAdGroupId(request.getTossImageAdGroupId());
+        if (request.getTossImageAdRatio() != null) config.setTossImageAdRatio(request.getTossImageAdRatio());
+        if (request.getIsTossImageAdEnabled() != null) config.setIsTossImageAdEnabled(request.getIsTossImageAdEnabled());
+
+        adPositionConfigRepository.save(config);
     }
 }

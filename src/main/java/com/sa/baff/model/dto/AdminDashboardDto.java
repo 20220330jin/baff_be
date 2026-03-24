@@ -300,4 +300,35 @@ public class AdminDashboardDto {
         private String tossAdResponse;
         private String regDateTime;
     }
+
+    // ===== 토스광고 설정 =====
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TossAdPositionConfig {
+        private Long id;
+        private String position;
+        private Integer tossAdRatio;
+        private String tossAdGroupId;
+        private Boolean isTossAdEnabled;
+        private String tossImageAdGroupId;
+        private Integer tossImageAdRatio;
+        private Boolean isTossImageAdEnabled;
+        private String regDateTime;
+        private String modDateTime;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UpdateTossAdConfigRequest {
+        private Integer tossAdRatio;
+        private String tossAdGroupId;
+        private Boolean isTossAdEnabled;
+        private String tossImageAdGroupId;
+        private Integer tossImageAdRatio;
+        private Boolean isTossImageAdEnabled;
+    }
 }

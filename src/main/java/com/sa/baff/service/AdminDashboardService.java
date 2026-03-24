@@ -53,4 +53,8 @@ public interface AdminDashboardService {
     // === 광고 시청 관리 ===
     AdminDashboardDto.AdWatchSummary getAdWatchSummary();
     Page<AdminDashboardDto.AdWatchHistoryItem> getAdWatchHistory(Pageable pageable);
+
+    // === 토스광고 설정 ===
+    List<AdminDashboardDto.TossAdPositionConfig> getTossAdConfigs();
+    void updateTossAdConfig(String position, AdminDashboardDto.UpdateTossAdConfigRequest request);
 }
