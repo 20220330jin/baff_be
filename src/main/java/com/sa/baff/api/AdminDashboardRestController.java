@@ -5,6 +5,7 @@ import com.sa.baff.model.dto.AdminDashboardDto;
 import com.sa.baff.repository.RewardConfigRepository;
 import com.sa.baff.service.AdminDashboardService;
 import com.sa.baff.util.RewardType;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -350,6 +351,7 @@ public class AdminDashboardRestController {
     }
 
     @PutMapping("/rewards/configs/{id}")
+    @Transactional
     public ResponseEntity<Map<String, String>> updateRewardConfig(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         RewardConfig config = rewardConfigRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("설정을 찾을 수 없습니다."));
