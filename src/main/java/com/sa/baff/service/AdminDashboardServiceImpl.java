@@ -899,6 +899,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .tossInterstitialAdGroupId(c.getTossInterstitialAdGroupId())
                         .isTossInterstitialAdEnabled(c.getIsTossInterstitialAdEnabled())
                         .rewardedAdRatio(c.getRewardedAdRatio())
+                        .rewardedAdGrams(c.getRewardedAdGrams())
+                        .interstitialAdGrams(c.getInterstitialAdGrams())
                         .regDateTime(c.getRegDateTime() != null ? c.getRegDateTime().format(DATETIME_FORMATTER) : null)
                         .modDateTime(c.getModDateTime() != null ? c.getModDateTime().format(DATETIME_FORMATTER) : null)
                         .build())
@@ -928,6 +930,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (request.getTossInterstitialAdGroupId() != null) config.setTossInterstitialAdGroupId(request.getTossInterstitialAdGroupId());
         if (request.getIsTossInterstitialAdEnabled() != null) config.setIsTossInterstitialAdEnabled(request.getIsTossInterstitialAdEnabled());
         if (request.getRewardedAdRatio() != null) config.setRewardedAdRatio(request.getRewardedAdRatio());
+        if (request.getRewardedAdGrams() != null) config.setRewardedAdGrams(request.getRewardedAdGrams());
+        if (request.getInterstitialAdGrams() != null) config.setInterstitialAdGrams(request.getInterstitialAdGrams());
 
         adPositionConfigRepository.save(config);
     }

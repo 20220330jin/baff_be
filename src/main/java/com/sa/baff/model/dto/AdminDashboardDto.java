@@ -322,6 +322,8 @@ public class AdminDashboardDto {
         private String tossInterstitialAdGroupId;
         private Boolean isTossInterstitialAdEnabled;
         private Integer rewardedAdRatio;
+        private Integer rewardedAdGrams;
+        private Integer interstitialAdGrams;
         private String regDateTime;
         private String modDateTime;
     }
@@ -342,5 +344,7 @@ public class AdminDashboardDto {
         private String tossInterstitialAdGroupId;
         private Boolean isTossInterstitialAdEnabled;
         private Integer rewardedAdRatio;
+        private Integer rewardedAdGrams;
+        private Integer interstitialAdGrams;
     }
 }

@@ -55,6 +55,8 @@ public class AdConfigRestController {
             item.put("tossInterstitialAdGroupId", c.getTossInterstitialAdGroupId());
             item.put("isInterstitialAdEnabled", c.getIsTossInterstitialAdEnabled());
             item.put("rewardedAdRatio", c.getRewardedAdRatio());
+            item.put("rewardedAdGrams", c.getRewardedAdGrams());
+            item.put("interstitialAdGrams", c.getInterstitialAdGrams());
             result.put(c.getPosition().name(), item);
         }
 

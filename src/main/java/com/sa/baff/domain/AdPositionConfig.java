@@ -68,4 +68,12 @@ public class AdPositionConfig extends BaseEntity {
     /** 리워드 광고 비율 (둘 다 활성 시 0~100%, 나머지=전면) */
     @Column(nullable = false, columnDefinition = "integer default 100")
     private Integer rewardedAdRatio = 100;
+
+    /** 리워드 광고 시청 시 지급 그램 */
+    @Column(nullable = false, columnDefinition = "integer default 1")
+    private Integer rewardedAdGrams = 1;
+
+    /** 전면 광고 시청 시 지급 그램 */
+    @Column(nullable = false, columnDefinition = "integer default 1")
+    private Integer interstitialAdGrams = 1;
 }
