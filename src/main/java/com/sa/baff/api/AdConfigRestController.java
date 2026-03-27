@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,5 +37,27 @@ public class AdConfigRestController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();
         }
+    }
+
+    /**
+     * 리워드/전면 광고 설정 일괄 조회 (FE useRewardedAd hook용)
+     * 나만그래 패턴: location → config map
+     */
+    @GetMapping("/reward-ad-config")
+    public ResponseEntity<Map<String, Map<String, Object>>> getRewardAdConfigs() {
+        List<AdPositionConfig> configs = adPositionConfigRepository.findAll();
+        Map<String, Map<String, Object>> result = new HashMap<>();
+
+        for (AdPositionConfig c : configs) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("tossRewardedAdGroupId", c.getTossAdGroupId());
+            item.put("isRewardedAdEnabled", c.getIsTossAdEnabled());
+            item.put("tossInterstitialAdGroupId", c.getTossInterstitialAdGroupId());
+            item.put("isInterstitialAdEnabled", c.getIsTossInterstitialAdEnabled());
+            item.put("rewardedAdRatio", c.getRewardedAdRatio());
+            result.put(c.getPosition().name(), item);
+        }
+
+        return ResponseEntity.ok(result);
     }
 }

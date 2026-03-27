@@ -56,4 +56,16 @@ public class AdPositionConfig extends BaseEntity {
     /** 작은 배너 광고 활성 여부 */
     @Column(nullable = false, columnDefinition = "boolean default false")
     private Boolean isTossBannerAdEnabled = false;
+
+    /** 전면(interstitial) 광고 그룹 ID */
+    @Column(length = 100)
+    private String tossInterstitialAdGroupId;
+
+    /** 전면 광고 활성 여부 */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean isTossInterstitialAdEnabled = false;
+
+    /** 리워드 광고 비율 (둘 다 활성 시 0~100%, 나머지=전면) */
+    @Column(nullable = false, columnDefinition = "integer default 100")
+    private Integer rewardedAdRatio = 100;
 }

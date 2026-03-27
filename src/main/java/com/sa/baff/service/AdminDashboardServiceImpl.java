@@ -896,6 +896,9 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .tossBannerAdGroupId(c.getTossBannerAdGroupId())
                         .tossBannerAdRatio(c.getTossBannerAdRatio())
                         .isTossBannerAdEnabled(c.getIsTossBannerAdEnabled())
+                        .tossInterstitialAdGroupId(c.getTossInterstitialAdGroupId())
+                        .isTossInterstitialAdEnabled(c.getIsTossInterstitialAdEnabled())
+                        .rewardedAdRatio(c.getRewardedAdRatio())
                         .regDateTime(c.getRegDateTime() != null ? c.getRegDateTime().format(DATETIME_FORMATTER) : null)
                         .modDateTime(c.getModDateTime() != null ? c.getModDateTime().format(DATETIME_FORMATTER) : null)
                         .build())
@@ -922,6 +925,9 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (request.getTossBannerAdGroupId() != null) config.setTossBannerAdGroupId(request.getTossBannerAdGroupId());
         if (request.getTossBannerAdRatio() != null) config.setTossBannerAdRatio(request.getTossBannerAdRatio());
         if (request.getIsTossBannerAdEnabled() != null) config.setIsTossBannerAdEnabled(request.getIsTossBannerAdEnabled());
+        if (request.getTossInterstitialAdGroupId() != null) config.setTossInterstitialAdGroupId(request.getTossInterstitialAdGroupId());
+        if (request.getIsTossInterstitialAdEnabled() != null) config.setIsTossInterstitialAdEnabled(request.getIsTossInterstitialAdEnabled());
+        if (request.getRewardedAdRatio() != null) config.setRewardedAdRatio(request.getRewardedAdRatio());
 
         adPositionConfigRepository.save(config);
     }

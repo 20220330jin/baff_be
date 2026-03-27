@@ -11,14 +11,12 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
-@ConditionalOnProperty(name = "changeup.reward.enabled", havingValue = "true")
 public class ExchangeServiceImpl implements ExchangeService {
 
     private final UserRepository userRepository;

@@ -9,7 +9,6 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -21,7 +20,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
-@ConditionalOnProperty(name = "changeup.reward.enabled", havingValue = "true")
 public class RewardServiceImpl implements RewardService {
 
     private final UserRepository userRepository;

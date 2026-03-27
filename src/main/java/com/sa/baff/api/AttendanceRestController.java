@@ -3,14 +3,12 @@ package com.sa.baff.api;
 import com.sa.baff.model.dto.AttendanceDto;
 import com.sa.baff.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/reward/attendance")
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "changeup.reward.enabled", havingValue = "true")
 public class AttendanceRestController {
 
     private final AttendanceService attendanceService;

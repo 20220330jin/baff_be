@@ -3,23 +3,21 @@ package com.sa.baff.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Slf4j
 @Component
-@ConditionalOnProperty(name = "changeup.reward.enabled", havingValue = "true")
 public class TossPromotionApiClient {
 
     private static final String GET_KEY_PATH = "/api-public/v1/promotion/get-key";
     private static final String EXECUTE_PATH = "/api-public/v1/promotion/execute";
     private static final String USER_KEY_HEADER = "x-toss-user-key";
 
-    private final WebClient tossWebClient;
+    private WebClient tossWebClient;
 
-    @Autowired
-    public TossPromotionApiClient(@Qualifier("tossWebClient") WebClient tossWebClient) {
+    @Autowired(required = false)
+    public void setTossWebClient(@Qualifier("tossWebClient") WebClient tossWebClient) {
         this.tossWebClient = tossWebClient;
     }
 
@@ -28,6 +26,9 @@ public class TossPromotionApiClient {
      * @return 발급된 key
      */
     public String grantReward(String userKey, String promotionCode, int amount) {
+        if (tossWebClient == null) {
+            throw new TossPromotionException("토스 API가 설정되지 않았습니다. (toss.api.url 미설정)");
+        }
         String key = getKey(userKey);
         executePromotion(userKey, promotionCode, key, amount);
         return key;

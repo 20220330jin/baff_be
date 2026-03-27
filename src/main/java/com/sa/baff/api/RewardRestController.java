@@ -4,14 +4,12 @@ import com.sa.baff.model.dto.RewardDto;
 import com.sa.baff.service.ExchangeService;
 import com.sa.baff.service.RewardService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/reward")
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "changeup.reward.enabled", havingValue = "true")
 public class RewardRestController {
 
     private final RewardService rewardService;
