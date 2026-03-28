@@ -31,6 +31,13 @@ public class RewardRestController {
         return rewardService.grantWeightAdBonus(socialId, weightId);
     }
 
+    /** 출석 광고 보너스 리워드 지급 */
+    @PostMapping("/attendance-ad-bonus")
+    public RewardDto.rewardResponse grantAttendanceAdBonus(
+            @AuthenticationPrincipal String socialId) {
+        return rewardService.grantAttendanceAdBonus(socialId);
+    }
+
     /** 리뷰 작성 리워드 지급 */
     @PostMapping("/review")
     public RewardDto.rewardResponse grantReviewReward(

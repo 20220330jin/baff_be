@@ -336,6 +336,7 @@ public class AdminDashboardRestController {
         Integer dailyLimit = (Integer) body.get("dailyLimit");
         String description = (String) body.get("description");
         Boolean enabled = body.get("enabled") != null ? (Boolean) body.get("enabled") : true;
+        Integer threshold = (Integer) body.get("threshold");
 
         RewardConfig config = new RewardConfig();
         config.setRewardType(RewardType.valueOf(rewardType));
@@ -345,6 +346,7 @@ public class AdminDashboardRestController {
         config.setEnabled(enabled);
         config.setProbability(100);
         config.setIsFixed(true);
+        config.setThreshold(threshold);
 
         rewardConfigRepository.save(config);
         return ResponseEntity.ok(Map.of("id", config.getId(), "message", "설정이 추가되었습니다."));
@@ -359,6 +361,7 @@ public class AdminDashboardRestController {
         if (body.containsKey("dailyLimit")) config.setDailyLimit((Integer) body.get("dailyLimit"));
         if (body.containsKey("description")) config.setDescription((String) body.get("description"));
         if (body.containsKey("enabled")) config.setEnabled((Boolean) body.get("enabled"));
+        if (body.containsKey("threshold")) config.setThreshold((Integer) body.get("threshold"));
         rewardConfigRepository.save(config);
         return ResponseEntity.ok(Map.of("message", "설정이 수정되었습니다."));
     }

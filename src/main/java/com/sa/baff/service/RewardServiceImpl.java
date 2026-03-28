@@ -118,6 +118,31 @@ public class RewardServiceImpl implements RewardService {
     }
 
     @Override
+    public RewardDto.rewardResponse grantAttendanceAdBonus(String socialId) {
+        UserB user = findUser(socialId);
+        Long userId = user.getId();
+
+        checkDailyLimit(userId, RewardType.ATTENDANCE_AD_BONUS);
+
+        int earnedGrams = determineAmount(RewardType.ATTENDANCE_AD_BONUS);
+
+        addPointsToUser(user, earnedGrams, PieceTransactionType.REWARD_AD_BONUS, null);
+
+        RewardHistory history = new RewardHistory(
+                userId, RewardType.ATTENDANCE_AD_BONUS, earnedGrams, RewardStatus.SUCCESS, null);
+        rewardHistoryRepository.save(history);
+
+        incrementDaily(userId, RewardType.ATTENDANCE_AD_BONUS, earnedGrams);
+
+        log.info("출석 광고 보너스: userId={}, earned={}g", userId, earnedGrams);
+
+        return RewardDto.rewardResponse.builder()
+                .earnedGrams(earnedGrams)
+                .message(GramConstants.earnMessage(earnedGrams))
+                .build();
+    }
+
+    @Override
     public RewardDto.historyResponse getRewardHistory(String socialId) {
         UserB user = findUser(socialId);
         Long userId = user.getId();
