@@ -6,6 +6,8 @@ import com.sa.baff.model.dto.RewardDto;
 import com.sa.baff.repository.*;
 import com.sa.baff.util.ExchangeStatus;
 import com.sa.baff.util.PieceTransactionType;
+import com.sa.baff.util.RewardStatus;
+import com.sa.baff.util.RewardType;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class ExchangeServiceImpl implements ExchangeService {
     private final PieceRepository pieceRepository;
     private final PieceTransactionRepository pieceTransactionRepository;
     private final ExchangeHistoryRepository exchangeHistoryRepository;
+    private final RewardHistoryRepository rewardHistoryRepository;
     private final TossPromotionApiClient tossPromotionApiClient;
 
     @Value("${reward.dummy-mode:true}")
@@ -88,6 +91,11 @@ public class ExchangeServiceImpl implements ExchangeService {
             history.setStatus(ExchangeStatus.SUCCESS);
             exchangeHistoryRepository.save(history);
 
+            // 리워드 히스토리에 차감 기록 (FE 내역에 표시)
+            RewardHistory rewardHistory = new RewardHistory(
+                    user.getId(), RewardType.EXCHANGE, -amount, RewardStatus.SUCCESS, null);
+            rewardHistoryRepository.save(rewardHistory);
+
             PieceTransaction successTx = PieceTransaction.builder()
                     .user(user)
                     .amount((long) tossAmount)
@@ -106,7 +114,9 @@ public class ExchangeServiceImpl implements ExchangeService {
         } catch (Exception e) {
             // 실패 → 잔액 복구
             history.setStatus(ExchangeStatus.FAILED);
-            history.setErrorMessage(e.getMessage());
+            history.setErrorMessage(e.getMessage() != null
+                    ? e.getMessage().substring(0, Math.min(e.getMessage().length(), 500))
+                    : "알 수 없는 오류");
             exchangeHistoryRepository.save(history);
 
             piece.addBalance((long) amount);

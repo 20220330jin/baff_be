@@ -10,7 +10,7 @@ import java.util.List;
  */
 public interface WeightService {
 
-    void recordWeight(WeightVO.recordWeight recordWeightParam, String socialId);
+    Long recordWeight(WeightVO.recordWeight recordWeightParam, String socialId);
 
     WeightDto.getWeightList getWeightList(String socialId);
 

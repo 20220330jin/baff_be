@@ -85,4 +85,14 @@ public class WeightDto {
         private Long weightRecordCount;
         private Double weightChangeAverage;
     }
+
+    @Getter
+    @Setter
+    public static class recordWeightResponse {
+        private Long id;
+
+        public recordWeightResponse(Long id) {
+            this.id = id;
+        }
+    }
 }

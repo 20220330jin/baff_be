@@ -283,7 +283,8 @@ public class RewardServiceImpl implements RewardService {
             case WEIGHT_AD_BONUS -> "체중 기록 광고 보너스";
             case STREAK_WEIGHT -> "체중 기록 스트릭";
             case GOAL_ACHIEVED -> "목표 달성";
-            case BATTLE_COMPLETE -> "배틀 완료";
+            case BATTLE_COMPLETE -> "대결 완료";
+            case EXCHANGE -> "토스포인트로 바꾸기";
         };
     }
 }

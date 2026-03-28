@@ -19,8 +19,9 @@ public class WeightRestController {
     private final WeightService weightService;
 
     @PostMapping("/recordWeight")
-    public void recordWeight(@RequestBody WeightVO.recordWeight recordWeightParam, @AuthenticationPrincipal String socialId) {
-        weightService.recordWeight(recordWeightParam, socialId);
+    public WeightDto.recordWeightResponse recordWeight(@RequestBody WeightVO.recordWeight recordWeightParam, @AuthenticationPrincipal String socialId) {
+        Long weightId = weightService.recordWeight(recordWeightParam, socialId);
+        return new WeightDto.recordWeightResponse(weightId);
     }
 
     @GetMapping("/getWeightList")

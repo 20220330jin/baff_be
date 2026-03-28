@@ -161,10 +161,7 @@ public class BattleServiceImpl implements BattleService {
                             .orElse(participant.getStartingWeight());
                     info.setCurrentWeight(currentWeight);
 
-                    double progress = 0.0;
-                    if (participant.getStartingWeight() != null && participant.getStartingWeight() > 0) {
-                        progress = ((participant.getStartingWeight() - currentWeight) / participant.getStartingWeight()) * 100;
-                    }
+                    double progress = calculateProgress(participant, currentWeight);
                     info.setProgress(progress);
 
                     info.setGoalType(participant.getGoalType());

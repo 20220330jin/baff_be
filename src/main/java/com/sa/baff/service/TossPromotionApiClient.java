@@ -5,13 +5,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 @Slf4j
 @Component
 public class TossPromotionApiClient {
 
-    private static final String GET_KEY_PATH = "/api-public/v1/promotion/get-key";
-    private static final String EXECUTE_PATH = "/api-public/v1/promotion/execute";
+    private static final String GET_KEY_PATH = "/api-partner/v1/apps-in-toss/promotion/execute-promotion/get-key";
+    private static final String EXECUTE_PATH = "/api-partner/v1/apps-in-toss/promotion/execute-promotion";
+    private static final String RESULT_PATH = "/api-partner/v1/apps-in-toss/promotion/execution-result";
     private static final String USER_KEY_HEADER = "x-toss-user-key";
 
     private WebClient tossWebClient;
@@ -35,42 +37,58 @@ public class TossPromotionApiClient {
     }
 
     private String getKey(String userKey) {
-        ApiResponse response = tossWebClient.post()
-                .uri(GET_KEY_PATH)
-                .header(USER_KEY_HEADER, userKey)
-                .retrieve()
-                .bodyToMono(ApiResponse.class)
-                .block();
+        try {
+            ApiResponse response = tossWebClient.post()
+                    .uri(GET_KEY_PATH)
+                    .header(USER_KEY_HEADER, userKey)
+                    .retrieve()
+                    .bodyToMono(ApiResponse.class)
+                    .block();
 
-        if (response == null || !"SUCCESS".equals(response.resultType) || response.success == null) {
-            String errorMsg = response != null && response.error != null
-                    ? response.error.code + ": " + response.error.message
-                    : "응답 없음";
-            throw new TossPromotionException("Key 발급 실패: " + errorMsg);
+            if (response == null || !"SUCCESS".equals(response.resultType) || response.success == null) {
+                throw new TossPromotionException("Key 발급 실패: 응답 없음 또는 실패");
+            }
+
+            log.info("[TossPromotion] Key 발급 성공 (userKey={})", maskUserKey(userKey));
+            return response.success.key;
+        } catch (WebClientResponseException e) {
+            log.error("[TossPromotion] Key 발급 HTTP 에러 (userKey={}, status={}, body={})",
+                    maskUserKey(userKey), e.getStatusCode(), e.getResponseBodyAsString());
+            throw new TossPromotionException("Key 발급 실패: HTTP " + e.getStatusCode(), e);
         }
-
-        return response.success.key;
     }
 
     private void executePromotion(String userKey, String promotionCode, String key, int amount) {
-        ExecuteRequest request = new ExecuteRequest(promotionCode, key, amount);
+        try {
+            ExecuteRequest request = new ExecuteRequest(promotionCode, key, amount);
 
-        ApiResponse response = tossWebClient.post()
-                .uri(EXECUTE_PATH)
-                .header(USER_KEY_HEADER, userKey)
-                .bodyValue(request)
-                .retrieve()
-                .bodyToMono(ApiResponse.class)
-                .block();
+            ApiResponse response = tossWebClient.post()
+                    .uri(EXECUTE_PATH)
+                    .header(USER_KEY_HEADER, userKey)
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(ApiResponse.class)
+                    .block();
 
-        if (response == null || !"SUCCESS".equals(response.resultType)) {
-            String errorMsg = response != null && response.error != null
-                    ? response.error.code + ": " + response.error.message
-                    : "응답 없음";
-            throw new TossPromotionException("리워드 지급 실패: " + errorMsg);
+            if (response == null || !"SUCCESS".equals(response.resultType)) {
+                String errorMsg = (response != null && response.error != null)
+                        ? response.error.code + ": " + response.error.message
+                        : "응답 없음";
+                throw new TossPromotionException("리워드 지급 실패: " + errorMsg);
+            }
+
+            log.info("[TossPromotion] 리워드 지급 성공 (userKey={}, code={}, amount={})",
+                    maskUserKey(userKey), promotionCode, amount);
+        } catch (WebClientResponseException e) {
+            log.error("[TossPromotion] 리워드 지급 HTTP 에러 (userKey={}, code={}, status={}, body={})",
+                    maskUserKey(userKey), promotionCode, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new TossPromotionException("리워드 지급 실패: HTTP " + e.getStatusCode(), e);
         }
+    }
 
-        log.info("토스 프로모션 실행 성공: promotionCode={}, amount={}", promotionCode, amount);
+    private String maskUserKey(String userKey) {
+        if (userKey == null || userKey.length() < 8) return "***";
+        return userKey.substring(0, 4) + "****" + userKey.substring(userKey.length() - 4);
     }
 
     // === 내부 DTO ===
@@ -95,6 +113,9 @@ public class TossPromotionApiClient {
     public static class TossPromotionException extends RuntimeException {
         public TossPromotionException(String message) {
             super(message);
+        }
+        public TossPromotionException(String message, Throwable cause) {
+            super(message, cause);
         }
     }
 }

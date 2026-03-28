@@ -30,7 +30,7 @@ public class WeightServiceImpl implements WeightService {
     private final GoalsRepository goalsRepository;
 
     @Override
-    public void recordWeight(WeightVO.recordWeight recordWeightParam, String socialId) {
+    public Long recordWeight(WeightVO.recordWeight recordWeightParam, String socialId) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
         // 요청 날짜를 기준으로 당일의 시작 시간과 종료 시간을 계산
         LocalDate requestDate = recordWeightParam.getRecordDate().toLocalDate();
@@ -45,7 +45,8 @@ public class WeightServiceImpl implements WeightService {
             Weight weightToUpdate = existingWeight.get();
             weightToUpdate.setWeight(recordWeightParam.getWeight());
             weightToUpdate.setRecordDate(recordWeightParam.getRecordDate());
-            weightRepository.save(weightToUpdate);
+            Weight saved = weightRepository.save(weightToUpdate);
+            return saved.getId();
         } else {
             if(user.getId() == 78L || user.getId() == 80L || user.getId() == 81L || user.getId() == 79L) {
                 Goals goals = goalsRepository.findFor78(user.getId());
@@ -60,7 +61,8 @@ public class WeightServiceImpl implements WeightService {
                     .weight(recordWeightParam.getWeight())
                     .recordDate(recordWeightParam.getRecordDate())
                     .build();
-            weightRepository.save(newWeight);
+            Weight saved = weightRepository.save(newWeight);
+            return saved.getId();
         }
     }
 

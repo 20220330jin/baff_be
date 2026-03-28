@@ -12,5 +12,8 @@ public enum RewardType {
     // Phase 2 (예약)
     STREAK_WEIGHT,           // 체중 기록 스트릭
     GOAL_ACHIEVED,           // 목표 달성
-    BATTLE_COMPLETE          // 배틀 완료 참가보상
+    BATTLE_COMPLETE,         // 배틀 완료 참가보상
+
+    // 환전
+    EXCHANGE                 // 환전 (그램 차감)
 }
