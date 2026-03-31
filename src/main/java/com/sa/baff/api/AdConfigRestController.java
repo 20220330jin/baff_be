@@ -31,10 +31,12 @@ public class AdConfigRestController {
                         map.put("position", config.getPosition().name());
                         map.put("tossBannerAdGroupId", config.getTossBannerAdGroupId() != null ? config.getTossBannerAdGroupId() : "");
                         map.put("tossBannerAdEnabled", config.getIsTossBannerAdEnabled());
+                        map.put("tossBannerAdRatio", config.getTossBannerAdRatio() != null ? config.getTossBannerAdRatio() : 100);
                         map.put("tossAdGroupId", config.getTossAdGroupId() != null ? config.getTossAdGroupId() : "");
                         map.put("tossAdEnabled", config.getIsTossAdEnabled());
                         map.put("tossImageAdGroupId", config.getTossImageAdGroupId() != null ? config.getTossImageAdGroupId() : "");
                         map.put("tossImageAdEnabled", config.getIsTossImageAdEnabled());
+                        map.put("tossImageAdRatio", config.getTossImageAdRatio() != null ? config.getTossImageAdRatio() : 0);
                         return ResponseEntity.ok(map);
                     })
                     .orElse(ResponseEntity.notFound().build());
