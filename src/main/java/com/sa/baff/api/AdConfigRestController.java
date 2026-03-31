@@ -26,13 +26,17 @@ public class AdConfigRestController {
         try {
             AdWatchLocation location = AdWatchLocation.valueOf(position);
             return adPositionConfigRepository.findByPosition(location)
-                    .map(config -> ResponseEntity.ok(Map.<String, Object>of(
-                            "position", config.getPosition().name(),
-                            "tossBannerAdGroupId", config.getTossBannerAdGroupId() != null ? config.getTossBannerAdGroupId() : "",
-                            "tossBannerAdEnabled", config.getIsTossBannerAdEnabled(),
-                            "tossAdGroupId", config.getTossAdGroupId() != null ? config.getTossAdGroupId() : "",
-                            "tossAdEnabled", config.getIsTossAdEnabled()
-                    )))
+                    .map(config -> {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("position", config.getPosition().name());
+                        map.put("tossBannerAdGroupId", config.getTossBannerAdGroupId() != null ? config.getTossBannerAdGroupId() : "");
+                        map.put("tossBannerAdEnabled", config.getIsTossBannerAdEnabled());
+                        map.put("tossAdGroupId", config.getTossAdGroupId() != null ? config.getTossAdGroupId() : "");
+                        map.put("tossAdEnabled", config.getIsTossAdEnabled());
+                        map.put("tossImageAdGroupId", config.getTossImageAdGroupId() != null ? config.getTossImageAdGroupId() : "");
+                        map.put("tossImageAdEnabled", config.getIsTossImageAdEnabled());
+                        return ResponseEntity.ok(map);
+                    })
                     .orElse(ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().build();

@@ -225,7 +225,7 @@ public class RewardServiceImpl implements RewardService {
                 .map(RewardConfig::getDailyLimit)
                 .filter(limit -> limit != null)
                 .findFirst()
-                .orElse(1); // 기본 일 1회
+                .orElse(configs.isEmpty() ? 3 : 1); // config 미설정 시 기본 3회, 설정 시 1회
 
         UserRewardDaily daily = userRewardDailyRepository
                 .findByUserIdAndRewardDateAndRewardType(userId, LocalDate.now(), rewardType)
