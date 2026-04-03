@@ -23,10 +23,10 @@ public class Piece extends BaseEntity {
     @Column(nullable = false)
     private Long balance = 0L;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "bigint not null default 0")
     private Long totalEarned = 0L;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "bigint not null default 0")
     private Long totalExchanged = 0L;
 
     public Piece(UserB user) {

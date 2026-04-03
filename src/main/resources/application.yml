@@ -9,3 +9,11 @@ changeup:
 
 reward:
   dummy-mode: true
+
+# AI 분석 (기본 비활성 -- application-local.yml에서 키 설정)
+ai:
+  claude:
+    api-key: ""
+    base-url: https://api.anthropic.com/v1
+    model-haiku: claude-haiku-4-5-20251001
+    model-sonnet: claude-sonnet-4-5-20241022

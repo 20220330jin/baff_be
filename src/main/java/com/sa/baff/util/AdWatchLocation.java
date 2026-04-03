@@ -10,5 +10,6 @@ public enum AdWatchLocation {
     ATTENDANCE_AD_BONUS,         // 출석 광고 보너스
     WEIGHT_AD_BONUS,             // 체중 기록 광고 보너스
     BENEFIT_TOP,                 // 혜택 페이지 상단 작은배너
-    BENEFIT                      // 혜택 페이지 카드 사이 작은배너
+    BENEFIT,                     // 혜택 페이지 카드 사이 작은배너
+    FASTING_BOTTOM               // 간헐적 단식 하단 작은배너
 }

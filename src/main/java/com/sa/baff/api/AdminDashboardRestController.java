@@ -1,9 +1,13 @@
 package com.sa.baff.api;
 
+import com.sa.baff.domain.AiFeatureConfig;
 import com.sa.baff.domain.RewardConfig;
 import com.sa.baff.model.dto.AdminDashboardDto;
+import com.sa.baff.model.dto.AiAnalysisDto;
+import com.sa.baff.repository.AiFeatureConfigRepository;
 import com.sa.baff.repository.RewardConfigRepository;
 import com.sa.baff.service.AdminDashboardService;
+import com.sa.baff.util.AiFeatureType;
 import com.sa.baff.util.RewardType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +35,7 @@ public class AdminDashboardRestController {
 
     private final AdminDashboardService adminDashboardService;
     private final RewardConfigRepository rewardConfigRepository;
+    private final AiFeatureConfigRepository aiFeatureConfigRepository;
 
     // ==================== 대시보드 개요 ====================
 
@@ -418,5 +423,50 @@ public class AdminDashboardRestController {
             @RequestBody AdminDashboardDto.UpdateTossAdConfigRequest request) {
         adminDashboardService.updateTossAdConfig(position, request);
         return ResponseEntity.ok().build();
+    }
+
+    // ==================== AI 기능 관리 ====================
+
+    @GetMapping("/ai/configs")
+    public ResponseEntity<List<AiAnalysisDto.AiFeatureConfigResponse>> getAiFeatureConfigs() {
+        List<AiFeatureConfig> configs = aiFeatureConfigRepository.findAll();
+
+        // 설정이 없으면 기본값 생성
+        if (configs.isEmpty()) {
+            for (AiFeatureType type : AiFeatureType.values()) {
+                AiFeatureConfig config = new AiFeatureConfig();
+                config.setFeatureType(type);
+                config.setEnabled(false);
+                config.setDescription(type == AiFeatureType.RUNNING ? "달리기 AI 분석" : "간헐적 단식 AI 분석");
+                aiFeatureConfigRepository.save(config);
+                configs.add(config);
+            }
+        }
+
+        List<AiAnalysisDto.AiFeatureConfigResponse> result = configs.stream()
+                .map(c -> {
+                    AiAnalysisDto.AiFeatureConfigResponse res = new AiAnalysisDto.AiFeatureConfigResponse();
+                    res.setId(c.getId());
+                    res.setFeatureType(c.getFeatureType());
+                    res.setEnabled(c.getEnabled());
+                    res.setDescription(c.getDescription());
+                    return res;
+                })
+                .toList();
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/ai/configs/{id}")
+    @Transactional
+    public ResponseEntity<Map<String, String>> updateAiFeatureConfig(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        AiFeatureConfig config = aiFeatureConfigRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("AI 설정을 찾을 수 없습니다."));
+        if (body.containsKey("enabled")) config.setEnabled((Boolean) body.get("enabled"));
+        if (body.containsKey("description")) config.setDescription((String) body.get("description"));
+        aiFeatureConfigRepository.save(config);
+        return ResponseEntity.ok(Map.of("message", "AI 설정이 수정되었습니다."));
     }
 }
