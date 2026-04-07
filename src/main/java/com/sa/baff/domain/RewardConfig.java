@@ -45,4 +45,7 @@ public class RewardConfig extends BaseEntity {
 
     /** 설명 */
     private String description;
+
+    /** 쿨타임 (분 단위, null이면 쿨타임 없음) */
+    private Integer cooldownMinutes;
 }

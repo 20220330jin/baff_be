@@ -15,8 +15,10 @@ public class AttendanceRestController {
 
     /** 오늘 출석 체크 */
     @PostMapping
-    public AttendanceDto.checkResponse checkAttendance(@AuthenticationPrincipal String socialId) {
-        return attendanceService.checkAttendance(socialId);
+    public AttendanceDto.checkResponse checkAttendance(
+            @AuthenticationPrincipal String socialId,
+            @RequestParam(defaultValue = "false") Boolean preAdWatched) {
+        return attendanceService.checkAttendance(socialId, preAdWatched);
     }
 
     /** 출석 현황 조회 (달력, 연속일수, 다음 보너스) */

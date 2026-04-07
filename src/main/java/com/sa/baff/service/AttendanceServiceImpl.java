@@ -3,6 +3,7 @@ package com.sa.baff.service;
 import com.sa.baff.domain.*;
 import com.sa.baff.model.dto.AttendanceDto;
 import com.sa.baff.repository.*;
+import com.sa.baff.util.MissionType;
 import com.sa.baff.util.PieceTransactionType;
 import com.sa.baff.util.RewardStatus;
 import com.sa.baff.util.RewardType;
@@ -30,6 +31,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final UserAttendanceRepository userAttendanceRepository;
     private final RewardConfigRepository rewardConfigRepository;
     private final RewardHistoryRepository rewardHistoryRepository;
+    private final MissionService missionService;
 
     private final Random random = new Random();
 
@@ -39,7 +41,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     };
 
     @Override
-    public AttendanceDto.checkResponse checkAttendance(String socialId) {
+    public AttendanceDto.checkResponse checkAttendance(String socialId, Boolean preAdWatched) {
         UserB user = findUser(socialId);
         Long userId = user.getId();
         LocalDate today = LocalDate.now();
@@ -64,6 +66,18 @@ public class AttendanceServiceImpl implements AttendanceService {
         RewardHistory history = new RewardHistory(
                 userId, RewardType.ATTENDANCE, earnedGrams, RewardStatus.SUCCESS, null);
         rewardHistoryRepository.save(history);
+
+        // 출석 전 광고 보너스
+        int preAdBonusGrams = 0;
+        if (Boolean.TRUE.equals(preAdWatched)) {
+            preAdBonusGrams = determineAmount(RewardType.ATTENDANCE_AD_BONUS);
+            if (preAdBonusGrams > 0) {
+                addPointsToUser(user, preAdBonusGrams, PieceTransactionType.REWARD_AD_BONUS, null);
+                RewardHistory preAdHistory = new RewardHistory(
+                        userId, RewardType.ATTENDANCE_AD_BONUS, preAdBonusGrams, RewardStatus.SUCCESS, null);
+                rewardHistoryRepository.save(preAdHistory);
+            }
+        }
 
         // 연속 출석 보너스 확인
         int streakBonusGrams = 0;
@@ -104,11 +118,15 @@ public class AttendanceServiceImpl implements AttendanceService {
         UserAttendance attendance = new UserAttendance(userId, today, newStreakCount, false);
         userAttendanceRepository.save(attendance);
 
-        log.info("출석 완료: userId={}, streak={}, earned={}g, bonus={}g",
-                userId, newStreakCount, earnedGrams, streakBonusGrams);
+        // 이번주 미션 진행도 증가
+        missionService.incrementMissionProgress(userId, MissionType.WEEKLY_ATTENDANCE);
+
+        log.info("출석 완료: userId={}, streak={}, earned={}g, preAdBonus={}g, bonus={}g",
+                userId, newStreakCount, earnedGrams, preAdBonusGrams, streakBonusGrams);
 
         return AttendanceDto.checkResponse.builder()
                 .earnedGrams(earnedGrams)
+                .preAdBonusGrams(preAdBonusGrams)
                 .streakCount(newStreakCount)
                 .streakBonusEarned(streakBonusEarned)
                 .streakBonusGrams(streakBonusGrams)

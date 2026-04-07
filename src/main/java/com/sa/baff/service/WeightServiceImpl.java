@@ -8,9 +8,9 @@ import com.sa.baff.model.vo.WeightVO;
 import com.sa.baff.repository.GoalsRepository;
 import com.sa.baff.repository.UserRepository;
 import com.sa.baff.repository.WeightRepository;
+import com.sa.baff.util.MissionType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -28,6 +28,7 @@ public class WeightServiceImpl implements WeightService {
     private final WeightRepository weightRepository;
     private final UserRepository userRepository;
     private final GoalsRepository goalsRepository;
+    private final MissionService missionService;
 
     @Override
     public Long recordWeight(WeightVO.recordWeight recordWeightParam, String socialId) {
@@ -62,6 +63,10 @@ public class WeightServiceImpl implements WeightService {
                     .recordDate(recordWeightParam.getRecordDate())
                     .build();
             Weight saved = weightRepository.save(newWeight);
+
+            // 새 기록 시 이번주 미션 진행도 증가
+            missionService.incrementMissionProgress(user.getId(), MissionType.WEEKLY_WEIGHT_LOG);
+
             return saved.getId();
         }
     }

@@ -1,6 +1,7 @@
 package com.sa.baff.repository;
 
 import com.sa.baff.domain.Review;
+import com.sa.baff.domain.UserB;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,4 +11,6 @@ import java.util.Optional;
 public interface ReviewRepository extends JpaRepository<Review, Long>, ReviewRepositoryCustom {
 
     Optional<Review> findByIdAndUserId(Long id, Long userId);
+
+    Optional<Review> findTopByUserAndDelYnOrderByRegDateTimeDesc(UserB user, char delYn);
 }

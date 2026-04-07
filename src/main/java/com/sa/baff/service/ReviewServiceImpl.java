@@ -6,6 +6,7 @@ import com.sa.baff.model.dto.ReviewDto;
 import com.sa.baff.model.vo.ReviewVO;
 import com.sa.baff.repository.*;
 import com.sa.baff.util.GoalType;
+import com.sa.baff.util.RewardType;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,12 +17,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService{
+
+    private static final int DEFAULT_COOLDOWN_MINUTES = 1440; // 24시간
 
     private final ReviewRepository reviewRepository;
     private final ReviewLikeRepository reviewLikeRepository;
@@ -30,10 +32,14 @@ public class ReviewServiceImpl implements ReviewService{
     private final BattleParticipantRepository battleParticipantRepository;
     private final UserRepository userRepository;
     private final GoalsRepository goalsRepository;
+    private final RewardConfigRepository rewardConfigRepository;
 
     @Override
-    public void createReview(ReviewVO.createReview param, String socialId) {
+    public Long createReview(ReviewVO.createReview param, String socialId) {
         UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // 쿨타임 체크
+        checkReviewCooldown(user);
 
         Review review = Review.builder()
                 .title(param.getTitle())
@@ -58,7 +64,59 @@ public class ReviewServiceImpl implements ReviewService{
                 .user(user)
                 .build();
 
-        reviewRepository.save(review);
+        Review saved = reviewRepository.save(review);
+        return saved.getId();
+    }
+
+    @Override
+    public Map<String, Object> getCooldownStatus(String socialId) {
+        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        int cooldownMinutes = getReviewCooldownMinutes();
+        Optional<Review> lastReview = reviewRepository.findTopByUserAndDelYnOrderByRegDateTimeDesc(user, 'N');
+
+        Map<String, Object> result = new HashMap<>();
+        if (lastReview.isPresent() && cooldownMinutes > 0) {
+            LocalDateTime cooldownEnd = lastReview.get().getRegDateTime().plusMinutes(cooldownMinutes);
+            if (LocalDateTime.now().isBefore(cooldownEnd)) {
+                long remainingMinutes = ChronoUnit.MINUTES.between(LocalDateTime.now(), cooldownEnd);
+                result.put("canWrite", false);
+                result.put("nextAvailableAt", cooldownEnd.toString());
+                result.put("remainingMinutes", remainingMinutes);
+                return result;
+            }
+        }
+        result.put("canWrite", true);
+        result.put("nextAvailableAt", null);
+        result.put("remainingMinutes", 0);
+        return result;
+    }
+
+    private void checkReviewCooldown(UserB user) {
+        int cooldownMinutes = getReviewCooldownMinutes();
+        if (cooldownMinutes <= 0) return;
+
+        Optional<Review> lastReview = reviewRepository.findTopByUserAndDelYnOrderByRegDateTimeDesc(user, 'N');
+        if (lastReview.isPresent()) {
+            LocalDateTime cooldownEnd = lastReview.get().getRegDateTime().plusMinutes(cooldownMinutes);
+            if (LocalDateTime.now().isBefore(cooldownEnd)) {
+                long remainingMinutes = ChronoUnit.MINUTES.between(LocalDateTime.now(), cooldownEnd);
+                long hours = remainingMinutes / 60;
+                long mins = remainingMinutes % 60;
+                String timeStr = hours > 0 ? hours + "시간 " + mins + "분" : mins + "분";
+                throw new IllegalStateException(timeStr + " 후에 다시 작성할 수 있어요.");
+            }
+        }
+    }
+
+    private int getReviewCooldownMinutes() {
+        List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(RewardType.REVIEW);
+        return configs.stream()
+                .map(RewardConfig::getCooldownMinutes)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(DEFAULT_COOLDOWN_MINUTES);
     }
 
     @Override

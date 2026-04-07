@@ -12,7 +12,7 @@ public class GoalsVO {
     public static class recordGoals {
         /* 목표 제목 */
         String title;
-        /* 목표 기간(시간) */
+        /* 목표 기간(일) */
         Integer presetDuration;
         /* 시작 체중 */
         Double startWeight;

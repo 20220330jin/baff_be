@@ -2,13 +2,19 @@ package com.sa.baff.api;
 
 import com.sa.baff.domain.AiFeatureConfig;
 import com.sa.baff.domain.RewardConfig;
+import com.sa.baff.domain.SmartPushConfig;
+import com.sa.baff.domain.SmartPushHistory;
 import com.sa.baff.model.dto.AdminDashboardDto;
 import com.sa.baff.model.dto.AiAnalysisDto;
 import com.sa.baff.repository.AiFeatureConfigRepository;
 import com.sa.baff.repository.RewardConfigRepository;
+import com.sa.baff.repository.SmartPushConfigRepository;
+import com.sa.baff.repository.SmartPushHistoryRepository;
 import com.sa.baff.service.AdminDashboardService;
+import com.sa.baff.service.SmartPushService;
 import com.sa.baff.util.AiFeatureType;
 import com.sa.baff.util.RewardType;
+import com.sa.baff.util.SmartPushType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,6 +42,9 @@ public class AdminDashboardRestController {
     private final AdminDashboardService adminDashboardService;
     private final RewardConfigRepository rewardConfigRepository;
     private final AiFeatureConfigRepository aiFeatureConfigRepository;
+    private final SmartPushConfigRepository smartPushConfigRepository;
+    private final SmartPushHistoryRepository smartPushHistoryRepository;
+    private final SmartPushService smartPushService;
 
     // ==================== 대시보드 개요 ====================
 
@@ -468,5 +477,51 @@ public class AdminDashboardRestController {
         if (body.containsKey("description")) config.setDescription((String) body.get("description"));
         aiFeatureConfigRepository.save(config);
         return ResponseEntity.ok(Map.of("message", "AI 설정이 수정되었습니다."));
+    }
+
+    // ==================== 스마트발송 관리 ====================
+
+    @GetMapping("/smart-push/configs")
+    public List<SmartPushConfig> getSmartPushConfigs() {
+        return smartPushConfigRepository.findAll();
+    }
+
+    @PutMapping("/smart-push/configs/{pushType}")
+    @Transactional
+    public ResponseEntity<Map<String, String>> updateSmartPushConfig(
+            @PathVariable String pushType,
+            @RequestBody Map<String, Object> body) {
+        SmartPushType type = SmartPushType.valueOf(pushType);
+        SmartPushConfig config = smartPushConfigRepository.findByPushType(type)
+                .orElseGet(() -> {
+                    SmartPushConfig newConfig = new SmartPushConfig();
+                    newConfig.setPushType(type);
+                    return newConfig;
+                });
+
+        if (body.containsKey("enabled")) config.setEnabled((Boolean) body.get("enabled"));
+        if (body.containsKey("title")) config.setTitle((String) body.get("title"));
+        if (body.containsKey("body")) config.setBody((String) body.get("body"));
+        if (body.containsKey("deepLink")) config.setDeepLink((String) body.get("deepLink"));
+        if (body.containsKey("thresholdDays")) config.setThresholdDays((Integer) body.get("thresholdDays"));
+        if (body.containsKey("cronExpression")) config.setCronExpression((String) body.get("cronExpression"));
+
+        smartPushConfigRepository.save(config);
+        return ResponseEntity.ok(Map.of("message", "스마트발송 설정이 수정되었습니다."));
+    }
+
+    @GetMapping("/smart-push/history")
+    public Page<SmartPushHistory> getSmartPushHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("regDateTime").descending());
+        return smartPushHistoryRepository.findAllByOrderByRegDateTimeDesc(pageable);
+    }
+
+    @PostMapping("/smart-push/trigger/{pushType}")
+    public ResponseEntity<Map<String, String>> triggerSmartPush(@PathVariable String pushType) {
+        SmartPushType type = SmartPushType.valueOf(pushType);
+        smartPushService.executePush(type);
+        return ResponseEntity.ok(Map.of("message", "스마트발송이 실행되었습니다."));
     }
 }

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/review")
@@ -38,8 +39,14 @@ public class ReviewRestController {
     }
 
     @PostMapping("/createReview")
-    public void createReview(@RequestBody ReviewVO.createReview createReviewParam, @AuthenticationPrincipal String socialId) {
-        reviewService.createReview(createReviewParam, socialId);
+    public ResponseEntity<Map<String, Long>> createReview(@RequestBody ReviewVO.createReview createReviewParam, @AuthenticationPrincipal String socialId) {
+        Long reviewId = reviewService.createReview(createReviewParam, socialId);
+        return ResponseEntity.ok(Map.of("id", reviewId));
+    }
+
+    @GetMapping("/cooldown-status")
+    public ResponseEntity<Map<String, Object>> getCooldownStatus(@AuthenticationPrincipal String socialId) {
+        return ResponseEntity.ok(reviewService.getCooldownStatus(socialId));
     }
 
     @GetMapping("/getReviewList")

@@ -14,6 +14,7 @@ public class AttendanceDto {
     @AllArgsConstructor
     public static class checkResponse {
         private Integer earnedGrams;
+        private Integer preAdBonusGrams;
         private Integer streakCount;
         private Boolean streakBonusEarned;
         private Integer streakBonusGrams;

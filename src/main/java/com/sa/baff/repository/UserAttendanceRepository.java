@@ -22,4 +22,15 @@ public interface UserAttendanceRepository extends JpaRepository<UserAttendance, 
             @Param("userId") Long userId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    /** 특정 기간 내 출석 이력이 있는 사용자 ID 목록 */
+    @Query("SELECT DISTINCT ua.userId FROM UserAttendance ua " +
+           "WHERE ua.attendanceDate BETWEEN :startDate AND :endDate")
+    List<Long> findUserIdsWithAttendanceBetween(
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
+
+    /** 특정 날짜에 출석한 사용자 ID 목록 */
+    @Query("SELECT ua.userId FROM UserAttendance ua WHERE ua.attendanceDate = :date")
+    List<Long> findUserIdsByAttendanceDate(@Param("date") LocalDate date);
 }

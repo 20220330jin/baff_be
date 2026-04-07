@@ -13,6 +13,7 @@ public enum PieceTransactionType {
     REWARD_ATTENDANCE,       // 출석 리워드
     REWARD_STREAK_ATTENDANCE,// 연속 출석 보너스
     REWARD_AD_BONUS,         // 광고 보너스 (광고 시청 추가 적립)
+    REWARD_MISSION,          // 미션 완료 리워드
 
     // === 환전 (Phase 1) ===
     EXCHANGE_REQUEST,        // 환전 요청 (차감)
