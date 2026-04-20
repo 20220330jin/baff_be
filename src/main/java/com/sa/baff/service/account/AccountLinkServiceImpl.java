@@ -19,6 +19,8 @@ import com.sa.baff.util.TossSocialIdMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -52,6 +54,8 @@ public class AccountLinkServiceImpl implements AccountLinkService {
     private final WeightRepository weightRepository;
     private final GoalsRepository goalsRepository;
     private final BattleParticipantRepository battleParticipantRepository;
+    private final AccountMergeService accountMergeService;
+    private final LinkTokenConsumer linkTokenConsumer;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -144,8 +148,69 @@ public class AccountLinkServiceImpl implements AccountLinkService {
 
     @Override
     public AccountLinkDto.ConfirmResponse confirmLink(AccountLinkDto.ConfirmRequest request) {
-        // Task 12에서 구현
-        throw new UnsupportedOperationException("Implemented in Task 12");
+        // 1. 멱등성: 이미 처리된 요청인지 확인
+        Optional<LinkToken> existing = linkTokenRepository.findByIdempotencyKey(request.idempotencyKey());
+        if (existing.isPresent() && existing.get().getIdempotencyResponse() != null) {
+            return parseConfirmResponse(existing.get().getIdempotencyResponse());
+        }
+
+        // 2. 토큰 유효성
+        LinkToken token = linkTokenRepository.findByToken(request.linkToken())
+                .orElseThrow(() -> new IllegalStateException("TOKEN_EXPIRED"));
+        if (token.getStatus() != LinkTokenStatus.PENDING
+                || token.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("TOKEN_EXPIRED");
+        }
+
+        // 3. Primary/Secondary 조회
+        UserB primary = userRepository.findById(token.getUserId())
+                .orElseThrow(() -> new IllegalStateException("PRIMARY_NOT_FOUND"));
+        String tossSocialId = TossSocialIdMapper.toStoredSocialId(request.tossUserKey());
+        UserB secondary = userRepository.findBySocialId(tossSocialId)
+                .orElseThrow(() -> new IllegalStateException("SECONDARY_NOT_FOUND"));
+
+        // 4. TOCTOU 재검증
+        String blockReason = detectBlockReason(primary, secondary);
+        if (blockReason != null) {
+            throw new IllegalStateException(blockReason);
+        }
+
+        // 5. 토큰 CONFIRMING 전환 + idempotencyKey 저장 (중복 실행 방지)
+        token.setStatus(LinkTokenStatus.CONFIRMING);
+        token.setIdempotencyKey(request.idempotencyKey());
+
+        // 6. 병합 트랜잭션
+        accountMergeService.merge(primary.getId(), secondary.getId());
+
+        // 7. 응답 구성 + idempotency response 저장
+        LocalDateTime linkedAt = LocalDateTime.now();
+        String responseJson = String.format(
+                "{\"success\":true,\"primaryUserId\":%d,\"linkedAt\":\"%s\"}",
+                primary.getId(), linkedAt);
+        token.setIdempotencyResponse(responseJson);
+
+        // 8. 커밋 후 CONSUMED 처리 (merge 트랜잭션과 독립)
+        Long tokenId = token.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                linkTokenConsumer.consume(tokenId);
+            }
+        });
+
+        return new AccountLinkDto.ConfirmResponse(true, primary.getId(), linkedAt);
+    }
+
+    private AccountLinkDto.ConfirmResponse parseConfirmResponse(String json) {
+        try {
+            // {"success":true,"primaryUserId":123,"linkedAt":"2026-04-20T23:00:00"}
+            Long primaryUserId = Long.parseLong(json.replaceAll(".*\"primaryUserId\":(\\d+).*", "$1"));
+            String linkedAtStr = json.replaceAll(".*\"linkedAt\":\"([^\"]+)\".*", "$1");
+            LocalDateTime linkedAt = LocalDateTime.parse(linkedAtStr);
+            return new AccountLinkDto.ConfirmResponse(true, primaryUserId, linkedAt);
+        } catch (Exception e) {
+            throw new IllegalStateException("IDEMPOTENCY_PARSE_ERROR");
+        }
     }
 
     private String generateSecureToken() {
