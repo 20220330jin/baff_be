@@ -6,6 +6,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
+@Table(uniqueConstraints = {
+    @UniqueConstraint(name = "ux_user_flag_user_flagkey", columnNames = {"userId", "flagKey"})
+})
 @NoArgsConstructor
 @Getter
 @Setter
@@ -16,6 +19,7 @@ public class UserFlag extends BaseEntity {
     @Column(name = "userFlagId")
     private Long id;
 
+    @Column(name = "flagKey")
     private String flagKey;
 
     @ManyToOne(fetch = FetchType.LAZY)

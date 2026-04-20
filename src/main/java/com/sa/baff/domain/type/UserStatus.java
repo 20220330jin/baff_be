@@ -1,5 +1,5 @@
 package com.sa.baff.domain.type;
 
 public enum UserStatus {
-    ACTIVE, INACTIVE, WITHDRAWN
+    ACTIVE, INACTIVE, WITHDRAWN, MERGED
 }
