@@ -1,0 +1,54 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: test-kakao-id
+            client-secret: test-kakao-secret
+            scope: account_email,profile_nickname
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+          google:
+            client-id: test-google-id
+            client-secret: test-google-secret
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+secret-key: test-secret-key-for-jwt-32-bytes-long
+
+cloud:
+  r2:
+    access-key-id: test-access-key
+    secret-access-key: test-secret-key
+    endpoint: http://localhost:9000
+    region: auto
+    bucket-name: test-bucket
+
+admin:
+  url: http://localhost:8081
+
+ai:
+  claude:
+    api-key: ""
+    base-url: https://api.anthropic.com/v1
+    model-haiku: claude-haiku-4-5-20251001
+    model-sonnet: claude-sonnet-4-5-20241022
+
+reward:
+  dummy-mode: true
+
+changeup:
+  reward:
+    enabled: false
