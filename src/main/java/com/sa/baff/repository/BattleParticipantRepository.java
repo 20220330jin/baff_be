@@ -3,12 +3,31 @@ package com.sa.baff.repository;
 import com.sa.baff.domain.BattleParticipant;
 import com.sa.baff.domain.BattleRoom;
 import com.sa.baff.domain.UserB;
+import com.sa.baff.util.BattleStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface BattleParticipantRepository extends JpaRepository<BattleParticipant, Long>, BattleParticipantRepositoryCustom {
+
+    /**
+     * 활성 배틀 참여 여부 (계정 통합 prepare/confirm 차단용 — spec §4.2, §4.3).
+     * room.delYn='N' AND participant.delYn='N' AND room.status IN (WAITING, IN_PROGRESS).
+     */
+    @Query("SELECT COUNT(p) > 0 FROM BattleParticipant p " +
+           "WHERE p.user.id = :userId AND p.delYn = 'N' " +
+           "  AND p.room.delYn = 'N' AND p.room.status IN :statuses")
+    boolean existsActiveByUserId(@Param("userId") Long userId,
+                                 @Param("statuses") List<BattleStatus> statuses);
+
+    /** 참가한 완료 배틀 건수 (Diff 계산용). */
+    @Query("SELECT COUNT(p) FROM BattleParticipant p " +
+           "WHERE p.user.id = :userId AND p.delYn = 'N' AND p.room.delYn = 'N'")
+    int countByUserId(@Param("userId") Long userId);
+
     Optional<BattleParticipant> findByRoomAndUser(BattleRoom room, UserB user);
 
     /**
