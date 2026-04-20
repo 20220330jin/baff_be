@@ -199,7 +199,7 @@ public class UserServiceImpl implements UserService {
         log.info("Toss login - userKey: {}, name: {}", encryptedUserInfo.getUserKey(), decryptedName);
 
         // 4. 사용자 조회 또는 생성
-        String socialId = String.valueOf(encryptedUserInfo.getUserKey());
+        String socialId = com.sa.baff.util.TossSocialIdMapper.toStoredSocialId(encryptedUserInfo.getUserKey());
         UserB user = userRepository.findBySocialId(socialId)
                 .map(existingUser -> {
                     if (existingUser.getDelYn() == 'Y') {
@@ -227,7 +227,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public void unlinkTossAccount(String userKey) {
         log.info("Toss unlink-callback 수신 - userKey: {}", userKey);
-        userRepository.findBySocialId(userKey).ifPresent(user -> {
+        String storedSocialId = com.sa.baff.util.TossSocialIdMapper.toStoredSocialId(userKey);
+        userRepository.findBySocialId(storedSocialId).ifPresent(user -> {
             userRepository.withdrawal(user.getId());
             log.info("Toss 연결 해제 처리 완료 - userKey: {}, userId: {}", userKey, user.getId());
         });
