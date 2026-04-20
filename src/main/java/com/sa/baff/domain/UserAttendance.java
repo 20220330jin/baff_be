@@ -1,5 +1,6 @@
 package com.sa.baff.domain;
 
+import com.sa.baff.domain.type.AttendanceSource;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,10 +34,16 @@ public class UserAttendance extends BaseEntity {
     @Column(nullable = false)
     private Boolean streakSaved = false;
 
+    /** 출처 — 계정 통합 시 streak 계산에서 WEB 레거시 제외 (spec §3.2). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AttendanceSource source = AttendanceSource.WEB;
+
     public UserAttendance(Long userId, LocalDate attendanceDate, Integer streakCount, Boolean streakSaved) {
         this.userId = userId;
         this.attendanceDate = attendanceDate;
         this.streakCount = streakCount;
         this.streakSaved = streakSaved;
+        this.source = AttendanceSource.WEB;
     }
 }

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,6 +48,14 @@ public class UserB extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private UserStatus status = UserStatus.ACTIVE;
+
+    /** 계정 통합 시 Primary UserB 참조 (Secondary 전용). status=MERGED일 때 사용. */
+    @Column(name = "primary_user_id")
+    private Long primaryUserId;
+
+    /** 계정 연결 배너 영구 dismiss 시각 (null이면 미dismiss). */
+    @Column(name = "account_link_banner_dismissed_at")
+    private LocalDateTime accountLinkBannerDismissedAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Goals> goals = new ArrayList<>();
