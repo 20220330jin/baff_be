@@ -6,7 +6,7 @@ import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.WeightDto;
 import com.sa.baff.model.vo.WeightVO;
 import com.sa.baff.repository.GoalsRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.repository.WeightRepository;
 import com.sa.baff.util.MissionType;
 import jakarta.transaction.Transactional;
@@ -26,13 +26,13 @@ import java.util.stream.Collectors;
 public class WeightServiceImpl implements WeightService {
 
     private final WeightRepository weightRepository;
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final GoalsRepository goalsRepository;
     private final MissionService missionService;
 
     @Override
     public Long recordWeight(WeightVO.recordWeight recordWeightParam, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         // 요청 날짜를 기준으로 당일의 시작 시간과 종료 시간을 계산
         LocalDate requestDate = recordWeightParam.getRecordDate().toLocalDate();
         LocalDateTime startOfDay = requestDate.atStartOfDay();
@@ -73,7 +73,7 @@ public class WeightServiceImpl implements WeightService {
 
     @Override
     public WeightDto.getWeightList getWeightList(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         List<Weight> weightList = weightRepository.findByUserId(user.getId());
 
         // 리턴할 데이터를 담을 그릇
@@ -117,7 +117,7 @@ public class WeightServiceImpl implements WeightService {
     @Override
     public WeightDto.getCurrentWeight getCurrentWeight(String socialId) {
         // 유저 정보 조회
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         WeightDto.getCurrentWeight weightInfo = weightRepository.getCurrentWeight(user.getId());
 
         return weightInfo;

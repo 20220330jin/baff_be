@@ -6,7 +6,7 @@ import com.sa.baff.domain.Weight;
 import com.sa.baff.model.dto.GoalsDto;
 import com.sa.baff.model.vo.GoalsVO;
 import com.sa.baff.repository.GoalsRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.repository.WeightRepository;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.EntityNotFoundException;
@@ -25,13 +25,13 @@ import java.util.stream.Collectors;
 public class GoalsServiceImpl implements GoalsService {
 
     private final GoalsRepository goalsRepository;
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final WeightRepository weightRepository;
 
     @Override
     public void recordGoals(GoalsVO.recordGoals recordGoalsParam) {
         // 유저 정보 조회
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(recordGoalsParam.getSocialId(), 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(recordGoalsParam.getSocialId()).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         LocalDateTime startDate = DateTimeUtils.now();
         LocalDateTime endDate = startDate;
@@ -50,7 +50,7 @@ public class GoalsServiceImpl implements GoalsService {
     @Override
     public List<GoalsDto.getGoalsList> getGoalsList(String socialId) {
         // 사용자 확인
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         // 최종 체중 계산을 위한 현재 체중 조회
         Optional<Weight> latestWeightOpt = weightRepository.findTopByUserOrderByRecordDateDesc(user);
@@ -91,7 +91,7 @@ public class GoalsServiceImpl implements GoalsService {
     @Override
     public List<GoalsDto.getGoalsList> getActiveGoalsList(String socialId) {
         // 사용자 확인
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId,'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         // 최종 체중 계산을 위한 현재 체중 조회
         Optional<Weight> latestWeightOpt = weightRepository.findTopByUserOrderByRecordDateDesc(user);
@@ -126,7 +126,7 @@ public class GoalsServiceImpl implements GoalsService {
     @Override
     public GoalsDto.getGoalDetail getGoalDetailForReview(Long goalId, String socialId) {
         // 1. 사용자 확인 및 조회
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + socialId));
 
         // 2. 목표(Goal) 조회 및 사용자 권한 확인

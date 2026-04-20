@@ -4,7 +4,7 @@ import com.sa.baff.domain.CustomOAuth2User;
 import com.sa.baff.domain.LoginHistory;
 import com.sa.baff.provider.JwtProvider;
 import com.sa.baff.repository.LoginHistoryRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtProvider jwtProvider;
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final LoginHistoryRepository loginHistoryRepository;
 
     private static final long EXPIRATION_TIME_SECONDS = TimeUnit.DAYS.toSeconds(7);
@@ -35,8 +35,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         System.out.println("=============Success Handler============");
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         String userId = oAuth2User.getName();
-        // role 조회 후 JWT에 포함
-        String role = userRepository.findBySocialId(userId)
+        // role 조회 후 JWT에 포함 (Resolver 경유 — MERGED 유저는 Primary role 반환)
+        String role = accountLinkedUserResolver.resolveActiveUserBySocialId(userId)
                 .map(u -> u.getRole().name())
                 .orElse("USER");
         String token = jwtProvider.create(userId, role);
@@ -130,7 +130,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
      * 로그인 기록 저장
      */
     private void saveLoginHistory(String userId, String userAgent) {
-        userRepository.findBySocialId(userId).ifPresent(user -> {
+        accountLinkedUserResolver.resolveActiveUserBySocialId(userId).ifPresent(user -> {
             // UserAgent 파싱
 //            UserAgentParserService.ParsedResult parsedResult = userAgentParserService.parse(userAgent);
 

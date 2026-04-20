@@ -3,7 +3,7 @@ package com.sa.baff.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sa.baff.domain.CustomOAuth2User;
 import com.sa.baff.domain.UserB;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -17,7 +17,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OAuth2UserServiceImpl extends DefaultOAuth2UserService {
 
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final NicknameGeneratorService nicknameGeneratorService;
 
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -44,7 +44,7 @@ public class OAuth2UserServiceImpl extends DefaultOAuth2UserService {
             userId = "kakao_" + oAuth2User.getAttributes().get("id");
             userEmail = kakaoAccount != null ? (String) kakaoAccount.get("email") : null;
 
-            if (!userRepository.existsBySocialIdAndDelYn(userId, 'N')) {
+            if (accountLinkedUserResolver.resolveActiveUserBySocialId(userId).isEmpty()) {
                 // 1. 랜덤 프로필 이미지 URL 선택
                 String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
 
@@ -60,7 +60,7 @@ public class OAuth2UserServiceImpl extends DefaultOAuth2UserService {
             userId = googleInfo.get("sub").toString();
             userEmail = googleInfo.get("email").toString();
 
-            if (!userRepository.existsBySocialIdAndDelYn(userId, 'N')) {
+            if (accountLinkedUserResolver.resolveActiveUserBySocialId(userId).isEmpty()) {
                 // 1. 랜덤 프로필 이미지 URL 선택
                 String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
 

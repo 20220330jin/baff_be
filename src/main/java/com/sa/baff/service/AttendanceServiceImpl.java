@@ -3,6 +3,7 @@ package com.sa.baff.service;
 import com.sa.baff.domain.*;
 import com.sa.baff.model.dto.AttendanceDto;
 import com.sa.baff.repository.*;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.MissionType;
 import com.sa.baff.util.PieceTransactionType;
 import com.sa.baff.util.RewardStatus;
@@ -25,7 +26,7 @@ import java.util.Random;
 @Transactional
 public class AttendanceServiceImpl implements AttendanceService {
 
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final PieceRepository pieceRepository;
     private final PieceTransactionRepository pieceTransactionRepository;
     private final UserAttendanceRepository userAttendanceRepository;
@@ -176,7 +177,7 @@ public class AttendanceServiceImpl implements AttendanceService {
     // === private helpers ===
 
     private UserB findUser(String socialId) {
-        return userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        return accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
     }
 
