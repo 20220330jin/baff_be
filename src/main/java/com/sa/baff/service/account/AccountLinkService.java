@@ -12,4 +12,6 @@ public interface AccountLinkService {
     AccountLinkDto.PrepareResponse prepareLink(AccountLinkDto.PrepareRequest request);
 
     AccountLinkDto.ConfirmResponse confirmLink(AccountLinkDto.ConfirmRequest request);
+
+    void dismissLinkBanner(String socialId);
 }

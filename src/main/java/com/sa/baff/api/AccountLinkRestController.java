@@ -5,6 +5,7 @@ import com.sa.baff.service.account.AccountLinkService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,6 +47,16 @@ public class AccountLinkRestController {
     public ResponseEntity<?> confirm(@RequestBody AccountLinkDto.ConfirmRequest request) {
         try {
             return ResponseEntity.ok(accountLinkService.confirmLink(request));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(new AccountLinkDto.ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/dismiss-banner")
+    public ResponseEntity<?> dismissBanner(@AuthenticationPrincipal String socialId) {
+        try {
+            accountLinkService.dismissLinkBanner(socialId);
+            return ResponseEntity.noContent().build();
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(new AccountLinkDto.ErrorResponse(e.getMessage()));
         }

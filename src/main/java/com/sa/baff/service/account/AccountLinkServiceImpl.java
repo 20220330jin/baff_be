@@ -201,6 +201,13 @@ public class AccountLinkServiceImpl implements AccountLinkService {
         return new AccountLinkDto.ConfirmResponse(true, primary.getId(), linkedAt);
     }
 
+    @Override
+    public void dismissLinkBanner(String socialId) {
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
+                .orElseThrow(() -> new IllegalStateException("USER_NOT_FOUND"));
+        user.setAccountLinkBannerDismissedAt(LocalDateTime.now());
+    }
+
     private AccountLinkDto.ConfirmResponse parseConfirmResponse(String json) {
         try {
             // {"success":true,"primaryUserId":123,"linkedAt":"2026-04-20T23:00:00"}
