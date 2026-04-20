@@ -6,7 +6,7 @@ import com.sa.baff.domain.type.InquiryStatus;
 import com.sa.baff.model.dto.InquiryDto;
 import com.sa.baff.model.vo.InquiryVO;
 import com.sa.baff.repository.InquiryRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
 @Transactional
 @RequiredArgsConstructor
 public class InquiryServiceImpl implements InquiryService{
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final InquiryRepository inquiryRepository;
     private final InquiryAsyncService inquiryAsyncService;
 
     @Override
     public void createInquiry(InquiryVO.createInquiry param, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Inquiry inquiry = Inquiry.builder()
                 .title(param.getTitle())
@@ -45,13 +45,13 @@ public class InquiryServiceImpl implements InquiryService{
 
     @Override
     public List<InquiryDto.getInquiryList> getInquiryList(InquiryVO.getInquiryListParam param, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
         return inquiryRepository.getInquiryList(param, user.getId());
     }
 
     @Override
     public InquiryDto.getInquiryList getInquiryDetail(Long inquiryId, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
         return inquiryRepository.getInquiryDetail(user.getId(), inquiryId);
     }
 

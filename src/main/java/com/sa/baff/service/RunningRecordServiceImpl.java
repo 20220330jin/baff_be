@@ -10,7 +10,7 @@ import com.sa.baff.model.vo.RunningRecordVO;
 import com.sa.baff.repository.AiAnalysisRepository;
 import com.sa.baff.repository.AiFeatureConfigRepository;
 import com.sa.baff.repository.RunningRecordRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.AiFeatureType;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.transaction.Transactional;
@@ -31,14 +31,14 @@ import java.util.stream.Collectors;
 public class RunningRecordServiceImpl implements RunningRecordService {
 
     private final RunningRecordRepository runningRecordRepository;
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final AiAnalysisRepository aiAnalysisRepository;
     private final AiFeatureConfigRepository aiFeatureConfigRepository;
     private final AnthropicApiClient anthropicApiClient;
 
     @Override
     public Long recordRunning(RunningRecordVO.RecordRunning param, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // 같은 날짜에도 여러 건 추가 가능
@@ -53,7 +53,7 @@ public class RunningRecordServiceImpl implements RunningRecordService {
 
     @Override
     public RunningRecordDto.GetRunningList getRunningList(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         List<RunningRecord> records = runningRecordRepository
@@ -92,7 +92,7 @@ public class RunningRecordServiceImpl implements RunningRecordService {
 
     @Override
     public AiAnalysisDto.AnalysisResponse getAnalysis(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // AI 기능 활성화 확인

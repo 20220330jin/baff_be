@@ -3,6 +3,7 @@ package com.sa.baff.service;
 import com.sa.baff.domain.*;
 import com.sa.baff.model.dto.MissionDto;
 import com.sa.baff.repository.*;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -27,7 +28,7 @@ public class MissionServiceImpl implements MissionService {
     private static final int WEEKLY_WEIGHT_LOG_TARGET = 3;
     private static final int DEFAULT_MISSION_REWARD = 5;
 
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final WeeklyMissionProgressRepository missionRepository;
     private final PieceRepository pieceRepository;
     private final PieceTransactionRepository pieceTransactionRepository;
@@ -148,7 +149,7 @@ public class MissionServiceImpl implements MissionService {
     // === private helpers ===
 
     private UserB findUser(String socialId) {
-        return userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        return accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
     }
 

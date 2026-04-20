@@ -5,7 +5,7 @@ import com.sa.baff.domain.ReviewLike;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.repository.ReviewLikeRepository;
 import com.sa.baff.repository.ReviewRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import java.util.Optional;
 public class ReviewLikeServiceImpl implements ReviewLikeService {
 
     private final ReviewRepository reviewRepository;
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final ReviewLikeRepository reviewLikeRepository;
 
     /**
@@ -27,7 +27,7 @@ public class ReviewLikeServiceImpl implements ReviewLikeService {
     @Override
     public boolean toggleReviewLike(Long reviewId, String socialId) {
         // 1. 사용자 및 리뷰 엔티티 조회
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         Review review = reviewRepository.findById(reviewId)

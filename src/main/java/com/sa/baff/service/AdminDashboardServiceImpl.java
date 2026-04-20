@@ -6,6 +6,7 @@ import com.sa.baff.domain.type.InquiryType;
 import com.sa.baff.domain.type.UserStatus;
 import com.sa.baff.model.dto.AdminDashboardDto;
 import com.sa.baff.repository.*;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.AdWatchLocation;
 import com.sa.baff.util.BattleStatus;
 import com.sa.baff.util.DateTimeUtils;
@@ -33,6 +34,7 @@ import java.util.stream.StreamSupport;
 public class AdminDashboardServiceImpl implements AdminDashboardService {
 
     private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final WeightRepository weightRepository;
     private final GoalsRepository goalsRepository;
     private final InquiryRepository inquiryRepository;
@@ -484,7 +486,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         Inquiry inquiry = inquiryRepository.findById(inquiryId)
                 .orElseThrow(() -> new EntityNotFoundException("문의를 찾을 수 없습니다. id=" + inquiryId));
 
-        UserB admin = userRepository.findBySocialId(adminSocialId)
+        // 답변 작성자는 Resolver 경유로 활성 Primary만 허용 (탈퇴/병합 계정 차단 — spec §9.3)
+        UserB admin = accountLinkedUserResolver.resolveActiveUserBySocialId(adminSocialId)
                 .orElseThrow(() -> new EntityNotFoundException("관리자를 찾을 수 없습니다. socialId=" + adminSocialId));
 
         InquiryReply reply = new InquiryReply(inquiry, content, admin.getId());

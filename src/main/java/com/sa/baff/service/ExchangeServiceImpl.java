@@ -4,6 +4,7 @@ import com.sa.baff.common.GramConstants;
 import com.sa.baff.domain.*;
 import com.sa.baff.model.dto.RewardDto;
 import com.sa.baff.repository.*;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.ExchangeStatus;
 import com.sa.baff.util.PieceTransactionType;
 import com.sa.baff.util.RewardStatus;
@@ -21,7 +22,7 @@ import org.springframework.stereotype.Service;
 @Transactional
 public class ExchangeServiceImpl implements ExchangeService {
 
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final PieceRepository pieceRepository;
     private final PieceTransactionRepository pieceTransactionRepository;
     private final ExchangeHistoryRepository exchangeHistoryRepository;
@@ -46,7 +47,7 @@ public class ExchangeServiceImpl implements ExchangeService {
                     "한 번에 " + GramConstants.EXCHANGE_MAX + GramConstants.GRAM_NAME + "까지 바꿀 수 있어요.");
         }
 
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
 
         // 비관적 락으로 잔액 조회

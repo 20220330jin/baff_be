@@ -8,6 +8,7 @@ import com.sa.baff.model.vo.TossVO;
 import com.sa.baff.model.vo.UserVO;
 import com.sa.baff.provider.JwtProvider;
 import com.sa.baff.repository.*;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +43,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final UserFlagRepository userFlagRepository;
     private final NicknameGeneratorService nicknameGeneratorService;
     private final JwtProvider jwtProvider;
@@ -58,7 +60,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto getUserInfo(String userId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(userId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(userId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         return UserDto.from(user);
     }
 
@@ -119,7 +121,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void insertHeight(String socialId, Double height) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setHeight(height);
         userRepository.save(user);
     }
@@ -151,26 +153,26 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void editProfileImage(String socialId, UserVO.editProfileImage param) {
-        UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         userRepository.editProfileImage(user.getId(), param);
     }
 
     @Override
     @Transactional
     public UserDto.editNicknameStatus editNickname(String socialId, UserVO.editNicknameRequest param) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         return userRepository.editNickname(user.getId(), param.getNickname());
     }
 
     @Override
     public List<UserDto.getUserFlagForPopUp> getUserFlagForPopUp(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         return userFlagRepository.getUserFlagForPopUp(user.getId());
     }
 
     @Override
     public void insertUserFlag(String socialId, UserVO.insertUserFlag userFlag) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new IllegalArgumentException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         UserFlag userFlag1 = new UserFlag();
         userFlag1.setFlagKey(userFlag.getFlagKey());

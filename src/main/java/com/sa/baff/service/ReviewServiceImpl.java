@@ -5,6 +5,7 @@ import com.sa.baff.model.dto.GoalsDto;
 import com.sa.baff.model.dto.ReviewDto;
 import com.sa.baff.model.vo.ReviewVO;
 import com.sa.baff.repository.*;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.GoalType;
 import com.sa.baff.util.RewardType;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,12 +32,13 @@ public class ReviewServiceImpl implements ReviewService{
     private final WeightRepository weightRepository;
     private final BattleParticipantRepository battleParticipantRepository;
     private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final GoalsRepository goalsRepository;
     private final RewardConfigRepository rewardConfigRepository;
 
     @Override
     public Long createReview(ReviewVO.createReview param, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         // 쿨타임 체크
         checkReviewCooldown(user);
@@ -70,7 +72,7 @@ public class ReviewServiceImpl implements ReviewService{
 
     @Override
     public Map<String, Object> getCooldownStatus(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         int cooldownMinutes = getReviewCooldownMinutes();
@@ -126,7 +128,7 @@ public class ReviewServiceImpl implements ReviewService{
 
         // socialId가 있을 때만 DB 조회를 시도
         if (socialId != null && !socialId.isEmpty()) {
-            userOptional = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N');
+            userOptional = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId);
         }
 
         // ⭐️ 핵심 수정 부분:
@@ -145,7 +147,7 @@ public class ReviewServiceImpl implements ReviewService{
 
     @Override
     public void deleteReview(Long reviewId, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         reviewRepository.deleteReview(reviewId, user.getId());
     }
@@ -250,7 +252,7 @@ public class ReviewServiceImpl implements ReviewService{
     @Override
     @Transactional
     public void editReview(ReviewVO.createReview param, String socialId, Long reviewId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N').orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Review reviewToUpdate = reviewRepository.findByIdAndUserId(reviewId, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Review not found or unauthorized access for reviewId: " + reviewId));

@@ -10,7 +10,7 @@ import com.sa.baff.model.vo.FastingRecordVO;
 import com.sa.baff.repository.AiAnalysisRepository;
 import com.sa.baff.repository.AiFeatureConfigRepository;
 import com.sa.baff.repository.FastingRecordRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.AiFeatureType;
 import com.sa.baff.util.DateTimeUtils;
 import com.sa.baff.util.FastingMode;
@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 public class FastingRecordServiceImpl implements FastingRecordService {
 
     private final FastingRecordRepository fastingRecordRepository;
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final AiAnalysisRepository aiAnalysisRepository;
     private final AiFeatureConfigRepository aiFeatureConfigRepository;
     private final AnthropicApiClient anthropicApiClient;
@@ -48,7 +48,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
 
     @Override
     public FastingRecordDto.StartFastingResponse startFasting(FastingRecordVO.StartFasting param, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // 이미 진행중인 단식이 있는지 확인
@@ -76,7 +76,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
 
     @Override
     public FastingRecordDto.EndFastingResponse endFasting(FastingRecordVO.EndFasting param, String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         FastingRecord record = fastingRecordRepository.findById(param.getFastingRecordId())
@@ -104,7 +104,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
 
     @Override
     public FastingRecordDto.ActiveFasting getActiveFasting(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         Optional<FastingRecord> active = fastingRecordRepository
@@ -129,7 +129,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
 
     @Override
     public FastingRecordDto.GetFastingList getFastingList(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         List<FastingRecord> records = fastingRecordRepository
@@ -192,7 +192,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
 
     @Override
     public AiAnalysisDto.AnalysisResponse getAnalysis(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         boolean aiEnabled = aiFeatureConfigRepository.findByFeatureType(AiFeatureType.FASTING)

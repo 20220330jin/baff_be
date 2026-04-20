@@ -7,7 +7,7 @@ import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.PieceDto;
 import com.sa.baff.repository.PieceRepository;
 import com.sa.baff.repository.PieceTransactionRepository;
-import com.sa.baff.repository.UserRepository;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.PieceTransactionType;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -24,11 +24,11 @@ public class PieceServiceImpl implements PieceService {
 
     private final PieceRepository pieceRepository;
     private final PieceTransactionRepository pieceTransactionRepository;
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
 
     @Override
     public PieceDto.balanceResponse getBalance(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
 
         Piece piece = getOrCreatePiece(user);
@@ -41,7 +41,7 @@ public class PieceServiceImpl implements PieceService {
 
     @Override
     public void deposit(String socialId, Long amount) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
 
         Piece piece = getOrCreatePiece(user);
@@ -103,7 +103,7 @@ public class PieceServiceImpl implements PieceService {
 
     @Override
     public boolean hasEnoughBalance(String socialId, Long amount) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
 
         Piece piece = getOrCreatePiece(user);
@@ -112,7 +112,7 @@ public class PieceServiceImpl implements PieceService {
 
     @Override
     public PieceDto.transactionHistoryResponse getTransactionHistory(String socialId) {
-        UserB user = userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
 
         Piece piece = getOrCreatePiece(user);

@@ -4,6 +4,7 @@ import com.sa.baff.common.GramConstants;
 import com.sa.baff.domain.*;
 import com.sa.baff.model.dto.RewardDto;
 import com.sa.baff.repository.*;
+import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -22,7 +23,7 @@ import java.util.stream.Collectors;
 @Transactional
 public class RewardServiceImpl implements RewardService {
 
-    private final UserRepository userRepository;
+    private final AccountLinkedUserResolver accountLinkedUserResolver;
     private final PieceRepository pieceRepository;
     private final PieceTransactionRepository pieceTransactionRepository;
     private final RewardConfigRepository rewardConfigRepository;
@@ -197,7 +198,7 @@ public class RewardServiceImpl implements RewardService {
     // === private helpers ===
 
     private UserB findUser(String socialId) {
-        return userRepository.findUserIdBySocialIdAndDelYn(socialId, 'N')
+        return accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
     }
 
