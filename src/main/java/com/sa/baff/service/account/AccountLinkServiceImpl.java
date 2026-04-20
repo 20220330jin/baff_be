@@ -8,6 +8,7 @@ import com.sa.baff.domain.type.LinkTokenStatus;
 import com.sa.baff.domain.type.UserStatus;
 import com.sa.baff.model.dto.AccountLinkDto;
 import com.sa.baff.repository.AccountLinkRepository;
+import com.sa.baff.repository.BattleInviteRepository;
 import com.sa.baff.repository.BattleParticipantRepository;
 import com.sa.baff.repository.GoalsRepository;
 import com.sa.baff.repository.LinkTokenRepository;
@@ -15,6 +16,7 @@ import com.sa.baff.repository.PieceRepository;
 import com.sa.baff.repository.UserRepository;
 import com.sa.baff.repository.WeightRepository;
 import com.sa.baff.util.BattleStatus;
+import com.sa.baff.util.InviteStatus;
 import com.sa.baff.util.TossSocialIdMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -54,6 +56,7 @@ public class AccountLinkServiceImpl implements AccountLinkService {
     private final WeightRepository weightRepository;
     private final GoalsRepository goalsRepository;
     private final BattleParticipantRepository battleParticipantRepository;
+    private final BattleInviteRepository battleInviteRepository;
     private final AccountMergeService accountMergeService;
     private final LinkTokenConsumer linkTokenConsumer;
 
@@ -120,7 +123,9 @@ public class AccountLinkServiceImpl implements AccountLinkService {
             return "TOSS_ALREADY_LINKED";
         }
         if (battleParticipantRepository.existsActiveByUserId(primary.getId(), ACTIVE_BATTLE_STATUSES)
-                || battleParticipantRepository.existsActiveByUserId(secondary.getId(), ACTIVE_BATTLE_STATUSES)) {
+                || battleParticipantRepository.existsActiveByUserId(secondary.getId(), ACTIVE_BATTLE_STATUSES)
+                || battleInviteRepository.existsPendingByUserId(primary.getId(), InviteStatus.PENDING)
+                || battleInviteRepository.existsPendingByUserId(secondary.getId(), InviteStatus.PENDING)) {
             return "ACTIVE_BATTLE";
         }
         return null;

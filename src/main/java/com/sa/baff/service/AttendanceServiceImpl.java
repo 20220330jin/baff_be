@@ -1,6 +1,8 @@
 package com.sa.baff.service;
 
 import com.sa.baff.domain.*;
+import com.sa.baff.domain.type.AccountLinkStatus;
+import com.sa.baff.domain.type.AttendanceSource;
 import com.sa.baff.model.dto.AttendanceDto;
 import com.sa.baff.repository.*;
 import com.sa.baff.service.account.AccountLinkedUserResolver;
@@ -16,9 +18,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -27,12 +31,17 @@ import java.util.Random;
 public class AttendanceServiceImpl implements AttendanceService {
 
     private final AccountLinkedUserResolver accountLinkedUserResolver;
+    private final AccountLinkRepository accountLinkRepository;
     private final PieceRepository pieceRepository;
     private final PieceTransactionRepository pieceTransactionRepository;
     private final UserAttendanceRepository userAttendanceRepository;
     private final RewardConfigRepository rewardConfigRepository;
     private final RewardHistoryRepository rewardHistoryRepository;
     private final MissionService missionService;
+
+    /** 병합 후 streak 산정 대상 source (spec §6.3) */
+    private static final Set<AttendanceSource> POST_MERGE_STREAK_SOURCES =
+            Set.of(AttendanceSource.TOSS, AttendanceSource.MERGED_TOSS);
 
     private final Random random = new Random();
 
@@ -47,15 +56,18 @@ public class AttendanceServiceImpl implements AttendanceService {
         Long userId = user.getId();
         LocalDate today = LocalDate.now();
 
-        // 중복 출석 체크
+        Collection<AttendanceSource> streakSources = streakSourcesFor(userId);
+
+        // 중복 출석 체크 (DB unique 제약은 전체 source 대상이므로 필터 없이 확인)
         if (userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today).isPresent()) {
             throw new IllegalStateException("오늘은 이미 출석했어요.");
         }
 
-        // 스트릭 계산 (어제 출석 여부)
+        // 스트릭 계산 (어제 출석 여부 — 병합 후 source 필터)
         LocalDate yesterday = today.minusDays(1);
-        Optional<UserAttendance> yesterdayAttendance =
-                userAttendanceRepository.findByUserIdAndAttendanceDate(userId, yesterday);
+        Optional<UserAttendance> yesterdayAttendance = streakSources == null
+                ? userAttendanceRepository.findByUserIdAndAttendanceDate(userId, yesterday)
+                : userAttendanceRepository.findByUserIdAndAttendanceDateAndSourceIn(userId, yesterday, streakSources);
         int newStreakCount = yesterdayAttendance.isPresent()
                 ? yesterdayAttendance.get().getStreakCount() + 1
                 : 1;
@@ -115,8 +127,11 @@ public class AttendanceServiceImpl implements AttendanceService {
             rewardHistoryRepository.save(bonusHistory);
         }
 
-        // 출석 기록 저장
+        // 출석 기록 저장 (병합된 사용자의 신규 출석은 TOSS source)
         UserAttendance attendance = new UserAttendance(userId, today, newStreakCount, false);
+        if (streakSources != null) {
+            attendance.setSource(AttendanceSource.TOSS);
+        }
         userAttendanceRepository.save(attendance);
 
         // 이번주 미션 진행도 증가
@@ -139,29 +154,31 @@ public class AttendanceServiceImpl implements AttendanceService {
         UserB user = findUser(socialId);
         Long userId = user.getId();
         LocalDate today = LocalDate.now();
+        Collection<AttendanceSource> streakSources = streakSourcesFor(userId);
 
-        // 오늘 출석 여부
-        boolean attendedToday = userAttendanceRepository
-                .findByUserIdAndAttendanceDate(userId, today).isPresent();
+        // 오늘/어제 조회 (병합 후 source 필터)
+        Optional<UserAttendance> todayRecord = streakSources == null
+                ? userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today)
+                : userAttendanceRepository.findByUserIdAndAttendanceDateAndSourceIn(userId, today, streakSources);
+        boolean attendedToday = todayRecord.isPresent();
 
         // 현재 스트릭
-        int currentStreak = 0;
+        int currentStreak;
         if (attendedToday) {
-            Optional<UserAttendance> todayRecord =
-                    userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today);
             currentStreak = todayRecord.map(UserAttendance::getStreakCount).orElse(0);
         } else {
-            // 어제 출석했으면 어제의 streak + 1이 잠재 스트릭
-            Optional<UserAttendance> yesterdayRecord =
-                    userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today.minusDays(1));
+            Optional<UserAttendance> yesterdayRecord = streakSources == null
+                    ? userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today.minusDays(1))
+                    : userAttendanceRepository.findByUserIdAndAttendanceDateAndSourceIn(userId, today.minusDays(1), streakSources);
             currentStreak = yesterdayRecord.map(UserAttendance::getStreakCount).orElse(0);
         }
 
-        // 이번 달 출석 목록
+        // 이번 달 출석 목록 (병합 후 source 필터)
         LocalDate monthStart = today.withDayOfMonth(1);
         LocalDate monthEnd = today.withDayOfMonth(today.lengthOfMonth());
-        List<LocalDate> monthAttendance =
-                userAttendanceRepository.findAttendanceDatesInMonth(userId, monthStart, monthEnd);
+        List<LocalDate> monthAttendance = streakSources == null
+                ? userAttendanceRepository.findAttendanceDatesInMonth(userId, monthStart, monthEnd)
+                : userAttendanceRepository.findAttendanceDatesInMonthBySource(userId, monthStart, monthEnd, streakSources);
 
         // 다음 보너스 목록
         List<AttendanceDto.streakBonusInfo> nextBonuses = buildNextBonuses(currentStreak);
@@ -179,6 +196,16 @@ public class AttendanceServiceImpl implements AttendanceService {
     private UserB findUser(String socialId) {
         return accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
+    }
+
+    /**
+     * 병합된 사용자의 streak 산정 대상 source를 반환. 병합되지 않은 사용자는 null(기존 전체 집계).
+     * spec §6.3: 병합 후 웹 출석(WEB)은 streak에서 제외.
+     */
+    private Collection<AttendanceSource> streakSourcesFor(Long userId) {
+        boolean isMerged = accountLinkRepository
+                .existsByUserIdAndStatus(userId, AccountLinkStatus.ACTIVE);
+        return isMerged ? POST_MERGE_STREAK_SOURCES : null;
     }
 
     private void addPointsToUser(UserB user, int amount, PieceTransactionType txType, Long referenceId) {

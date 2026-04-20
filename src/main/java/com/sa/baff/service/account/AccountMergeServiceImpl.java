@@ -97,7 +97,18 @@ public class AccountMergeServiceImpl implements AccountMergeService {
         em.createQuery("UPDATE ReviewLike rl SET rl.user = :p WHERE rl.user = :s")
                 .setParameter("p", primary).setParameter("s", secondary).executeUpdate();
 
-        // 7. AiAnalysis 중복 제거 후 재귀속
+        // 7. AiAnalysis 최신 유지 병합 (spec §3.3)
+        em.createNativeQuery(
+                "UPDATE ai_analysis p SET " +
+                "  analyzed_at = s.analyzed_at, " +
+                "  analysis_haiku = s.analysis_haiku, " +
+                "  analysis_sonnet = s.analysis_sonnet, " +
+                "  latest_record_at = s.latest_record_at " +
+                "FROM ai_analysis s " +
+                "WHERE p.user_id = :pId AND s.user_id = :sId " +
+                "  AND p.feature_type = s.feature_type " +
+                "  AND s.analyzed_at > p.analyzed_at")
+                .setParameter("pId", primaryUserId).setParameter("sId", secondaryUserId).executeUpdate();
         em.createQuery(
                 "DELETE FROM AiAnalysis a WHERE a.userId = :sId " +
                 "AND EXISTS (SELECT 1 FROM AiAnalysis a2 WHERE a2.userId = :pId AND a2.featureType = a.featureType)")
@@ -105,7 +116,15 @@ public class AccountMergeServiceImpl implements AccountMergeService {
         em.createQuery("UPDATE AiAnalysis a SET a.userId = :pId WHERE a.userId = :sId")
                 .setParameter("pId", primaryUserId).setParameter("sId", secondaryUserId).executeUpdate();
 
-        // 8. UserRewardDaily 중복 제거 후 재귀속
+        // 8. UserRewardDaily 합산 병합 (count / totalAmount)
+        em.createNativeQuery(
+                "UPDATE user_reward_dailies p SET " +
+                "  count = p.count + s.count, " +
+                "  total_amount = p.total_amount + s.total_amount " +
+                "FROM user_reward_dailies s " +
+                "WHERE p.user_id = :pId AND s.user_id = :sId " +
+                "  AND p.reward_date = s.reward_date AND p.reward_type = s.reward_type")
+                .setParameter("pId", primaryUserId).setParameter("sId", secondaryUserId).executeUpdate();
         em.createQuery(
                 "DELETE FROM UserRewardDaily urd WHERE urd.userId = :sId " +
                 "AND EXISTS (SELECT 1 FROM UserRewardDaily urd2 WHERE urd2.userId = :pId " +
@@ -114,7 +133,16 @@ public class AccountMergeServiceImpl implements AccountMergeService {
         em.createQuery("UPDATE UserRewardDaily urd SET urd.userId = :pId WHERE urd.userId = :sId")
                 .setParameter("pId", primaryUserId).setParameter("sId", secondaryUserId).executeUpdate();
 
-        // 9. WeeklyMissionProgress 중복 제거 후 재귀속
+        // 9. WeeklyMissionProgress 합산 병합 (currentCount, completed/rewardClaimed OR)
+        em.createNativeQuery(
+                "UPDATE weekly_mission_progress p SET " +
+                "  current_count = p.current_count + s.current_count, " +
+                "  completed = p.completed OR s.completed, " +
+                "  reward_claimed = p.reward_claimed OR s.reward_claimed " +
+                "FROM weekly_mission_progress s " +
+                "WHERE p.user_id = :pId AND s.user_id = :sId " +
+                "  AND p.week_start_date = s.week_start_date AND p.mission_type = s.mission_type")
+                .setParameter("pId", primaryUserId).setParameter("sId", secondaryUserId).executeUpdate();
         em.createQuery(
                 "DELETE FROM WeeklyMissionProgress wmp WHERE wmp.userId = :sId " +
                 "AND EXISTS (SELECT 1 FROM WeeklyMissionProgress wmp2 WHERE wmp2.userId = :pId " +
