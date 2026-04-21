@@ -183,34 +183,45 @@ public class AccountLinkServiceImpl implements AccountLinkService {
             throw new IllegalStateException("TOKEN_EXPIRED");
         }
 
-        // 3. Primary/Secondary 조회
+        // 3. prepare에서 저장된 tossUserKey + nonce 해시 로드 (필수)
+        String tossSocialId = token.getTossUserKey();
+        String storedNonceHash = token.getPrepareNonceHash();
+        if (tossSocialId == null || storedNonceHash == null) {
+            throw new IllegalStateException("PREPARE_REQUIRED");
+        }
+
+        // 4. nonce 검증 (Plan Review Round 2 P0 — Secondary 소유/동의 증명)
+        if (request.nonce() == null || !sha256Hex(request.nonce()).equals(storedNonceHash)) {
+            throw new IllegalStateException("INVALID_NONCE");
+        }
+
+        // 5. Primary/Secondary 조회
         UserB primary = userRepository.findById(token.getUserId())
                 .orElseThrow(() -> new IllegalStateException("PRIMARY_NOT_FOUND"));
-        String tossSocialId = TossSocialIdMapper.toStoredSocialId(request.tossUserKey());
         UserB secondary = userRepository.findBySocialId(tossSocialId)
                 .orElseThrow(() -> new IllegalStateException("SECONDARY_NOT_FOUND"));
 
-        // 4. TOCTOU 재검증
+        // 6. TOCTOU 재검증
         String blockReason = detectBlockReason(primary, secondary);
         if (blockReason != null) {
             throw new IllegalStateException(blockReason);
         }
 
-        // 5. 토큰 CONFIRMING 전환 + idempotencyKey 저장 (중복 실행 방지)
+        // 7. 토큰 CONFIRMING 전환 + idempotencyKey 저장 (중복 실행 방지)
         token.setStatus(LinkTokenStatus.CONFIRMING);
         token.setIdempotencyKey(request.idempotencyKey());
 
-        // 6. 병합 트랜잭션
+        // 8. 병합 트랜잭션
         accountMergeService.merge(primary.getId(), secondary.getId());
 
-        // 7. 응답 구성 + idempotency response 저장
+        // 9. 응답 구성 + idempotency response 저장
         LocalDateTime linkedAt = LocalDateTime.now();
         String responseJson = String.format(
                 "{\"success\":true,\"primaryUserId\":%d,\"linkedAt\":\"%s\"}",
                 primary.getId(), linkedAt);
         token.setIdempotencyResponse(responseJson);
 
-        // 8. 커밋 후 CONSUMED 처리 (merge 트랜잭션과 독립)
+        // 10. 커밋 후 CONSUMED 처리 (merge 트랜잭션과 독립)
         Long tokenId = token.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
