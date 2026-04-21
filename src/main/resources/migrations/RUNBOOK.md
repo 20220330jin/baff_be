@@ -48,9 +48,48 @@ SELECT indexname, indexdef FROM pg_indexes
 ```
 
 ## 3. 배포 후 스모크 테스트
-- `/api/account/link/issue-token` 호출 → 200 + linkToken 반환
-- `/api/account/link/prepare` 호출 (활성 배틀 없는 테스트 계정) → canLink=true + diff
-- 로그인 경로 정상 동작 확인 (Resolver 전환 영향)
+
+### 3.1 Phase 1.5 배포 직후 (기본값 `baff.account-link.enabled=false`) — CP2 Round 3 P1-2 반영
+
+**기대값**: 4개 endpoint 모두 **404 응답** + service 미호출. feature flag가 기본 disabled이므로 정상 동작.
+
+```bash
+curl -i -X POST $HOST/api/account/link/issue-token
+# 기대: HTTP/1.1 404 Not Found
+
+curl -i -X POST $HOST/api/account/link/prepare \
+     -H 'Content-Type: application/json' \
+     -d '{"linkToken":"x","authorizationCode":"x","referrer":"x"}'
+# 기대: HTTP/1.1 404 Not Found
+
+curl -i -X POST $HOST/api/account/link/confirm \
+     -H 'Content-Type: application/json' \
+     -d '{"linkToken":"x","idempotencyKey":"x","nonce":"x"}'
+# 기대: HTTP/1.1 404 Not Found
+
+curl -i -X PATCH $HOST/api/account/link/dismiss-banner
+# 기대: HTTP/1.1 404 Not Found
+```
+
+- 404 이외 응답이면 feature flag 로딩 실패 → 즉시 롤백 검토
+- 로그인 경로는 영향 없음 (Resolver 미변경) — `/api/toss/login` 수동 curl 회귀 확인
+
+### 3.2 Enable 스모크 테스트 (별도 절차 — 릴리즈 승인 이후만 수행)
+
+**선행 조건** (Plan v3 Task 1.5-9 활성화 조건 5단계 모두 충족):
+1. Phase 1.5 BE merge + CP2 Round 3 Sign-off ✅
+2. Phase 2 FE 구현 완료
+3. CP2-FE Sign-off
+4. 내부 테스트 통과
+5. 대표님 릴리즈 승인
+
+**활성화 절차**:
+- `application-prod.yml`에 `baff.account-link.enabled: true` 설정 후 재배포 (또는 Render 환경변수)
+- 활성화 후 스모크:
+  - `/api/account/link/issue-token` 호출 (로그인 세션 필수) → 200 + linkToken 반환
+  - `/api/account/link/prepare` 호출 (유효 authorizationCode + 활성 배틀 없는 테스트 계정) → canLink=true + diff + nonce
+  - `/api/account/link/confirm` 호출 (prepare 응답 nonce 그대로) → success=true + primaryUserId
+- 어느 하나라도 실패하면 `enabled: false`로 즉시 롤백
 
 ## 4. 모니터링 (배포 후 24시간)
 - Render 로그에서 로그인 실패 + Account link API 에러율 watch

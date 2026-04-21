@@ -13,9 +13,11 @@
 --
 -- 참고: spec.md §3.1 link_tokens 테이블, §4.2 prepare, §4.3 confirm 트랜잭션 2.1단계
 
-ALTER TABLE link_tokens ADD COLUMN toss_user_key VARCHAR(255) NULL;
-ALTER TABLE link_tokens ADD COLUMN prepare_nonce_hash VARCHAR(64) NULL;
+-- 재실행 가능성 (idempotent) — Hibernate ddl-auto가 컬럼을 먼저 만들 수 있으므로 IF NOT EXISTS 필수.
+-- CP2 Round 3 P1-1: 앱 선배포 시 V002가 ALTER 실패하지 않도록 방어.
+ALTER TABLE link_tokens ADD COLUMN IF NOT EXISTS toss_user_key VARCHAR(255) NULL;
+ALTER TABLE link_tokens ADD COLUMN IF NOT EXISTS prepare_nonce_hash VARCHAR(64) NULL;
 
-CREATE INDEX ix_link_tokens_toss_user_key
+CREATE INDEX IF NOT EXISTS ix_link_tokens_toss_user_key
   ON link_tokens(toss_user_key)
   WHERE toss_user_key IS NOT NULL;
