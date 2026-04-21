@@ -2,12 +2,6 @@ spring:
   profiles:
     active: local
 
-# 계정 통합 API (기본 비활성화 -- Phase 2 FE + CP2-FE + 내부 테스트 + 릴리즈 승인 후 true로 전환)
-# Plan v3 Task 1.5-9, Plan Review Round 3 P0
-baff:
-  account-link:
-    enabled: false
-
 # 리워드/환전 기능 (기본 비활성화 -- 운영 무영향)
 changeup:
   reward:
