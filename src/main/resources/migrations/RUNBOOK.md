@@ -1,31 +1,52 @@
 # S3 Account Integration — Migration Runbook
 
 > 대상 DB: Render PostgreSQL (prod)
-> 선행: Phase 1 BE 배포 (ddl-auto=update로 신 엔티티/컬럼 자동 반영)
+>
+> **배포 순서 원칙 (2026-04-21 hotfix 이후)**:
+> V001을 **앱 배포 전**에 실행하는 것이 원칙 (권장). Hibernate ddl-auto=update가 NOT NULL 컬럼을 기존 row에
+> 추가하려다 실패하는 맹점 때문. V001/V002 모두 IF NOT EXISTS 기반이라 재실행 안전하며, self-contained로
+> 컬럼 생성/backfill/제약 추가를 모두 처리.
 
-## 1. 배포 순서
+## 1. 배포 순서 (권장: SQL 선실행)
 
-### 1.1 앱 배포
-- baff_be `feat/s3-account-integration-phase1` 브랜치 merge 후 main 배포
-- Render 자동 배포 모니터링: Spring Boot 재시작 + Hibernate ddl-auto 실행
-- 자동 생성 확인:
-  - 테이블: `account_links`, `account_merge_logs`, `link_tokens`
-  - `users` 컬럼: `primary_user_id`, `account_link_banner_dismissed_at`
-  - `user_attendances.source` (DEFAULT 'WEB')
-  - `user_flag` 테이블의 `ux_user_flag_user_flagkey` unique
+### 1.1 V001 SQL 선실행
 
-### 1.2 V001 SQL 실행
 ```bash
 psql $DATABASE_URL -f src/main/resources/migrations/V001__account_integration_schema.sql
 ```
 
-### 1.2.5 V002 SQL 실행 (Phase 1.5 v3)
+V001이 처리하는 것 (self-contained, 2026-04-21 hotfix):
+- **§0 user_attendances.source 자체 마이그레이션** — NULLABLE + DEFAULT → backfill → NOT NULL → CHECK 제약 순차 적용 (DO 블록으로 멱등)
+- §1 `account_links` partial unique 2종 (테이블 존재 시)
+- §2 `account_merge_logs` retention 인덱스 (테이블 존재 시)
+- §3 `link_tokens` idempotency 인덱스 (테이블 존재 시)
+- §4 토스 유저 출석 `source='TOSS'` backfill
+
+**주의**: `account_links`/`account_merge_logs`/`link_tokens` 테이블 자체는 Hibernate가 생성함. 따라서 최초 배포 시 테이블이 아직 없으면 §1~3 CREATE INDEX가 실패할 수 있음 → 1.4 대안 사용.
+
+### 1.2 V002 SQL 실행
+
 ```bash
 psql $DATABASE_URL -f src/main/resources/migrations/V002__link_token_toss_user_key_and_nonce.sql
 ```
-- 반드시 V001 이후 실행
-- link_tokens에 `toss_user_key` + `prepare_nonce_hash` 컬럼 추가 (nullable)
+
+- link_tokens에 `toss_user_key` + `prepare_nonce_hash` 컬럼 추가
 - `ix_link_tokens_toss_user_key` partial index 생성
+- V001 이후 실행 (link_tokens 테이블 존재 필요)
+
+### 1.3 앱 배포
+
+- baff_be main 브랜치 push → Render 자동 배포
+- Hibernate ddl-auto가 스키마 차이 대부분 skip (이미 반영됨)
+- 부팅 로그에 `source ... contains null values` 등 DDL WARN 없어야 함
+
+### 1.4 대안: 앱 선배포 (최초 배포 혹은 테이블 미존재 시)
+
+1. 앱 배포 — Hibernate가 신규 테이블 생성 시도
+2. `user_attendances.source` NOT NULL 추가 실패 로그 발생 가능 (2026-04-21 실제 발생)
+3. V001 즉시 실행 — §0이 컬럼/제약 복구
+4. 앱 재시작 — Hibernate가 스키마 OK 판단
+5. V002 실행
 
 ### 1.3 검증 쿼리 (필수)
 ```sql
