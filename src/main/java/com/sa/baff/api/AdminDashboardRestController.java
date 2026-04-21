@@ -14,6 +14,7 @@ import com.sa.baff.service.AdminDashboardService;
 import com.sa.baff.service.SmartPushService;
 import com.sa.baff.util.AiFeatureType;
 import com.sa.baff.util.RewardType;
+import com.sa.baff.util.SmartPushTargetStrategy;
 import com.sa.baff.util.SmartPushType;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
