@@ -27,7 +27,7 @@ public class AccountLinkedUserResolverImpl implements AccountLinkedUserResolver 
                 .findByProviderAndProviderUserIdAndStatus(PROVIDER_TOSS, socialId, AccountLinkStatus.ACTIVE);
         if (link.isPresent()) {
             return userRepository.findById(link.get().getUserId())
-                    .filter(u -> u.getStatus() == UserStatus.ACTIVE);
+                    .filter(AccountLinkedUserResolverImpl::isActive);
         }
 
         // 2. 기존 UserB 조회
@@ -40,11 +40,20 @@ public class AccountLinkedUserResolverImpl implements AccountLinkedUserResolver 
         // 3. MERGED → primary_user_id로 재조회
         if (user.getStatus() == UserStatus.MERGED && user.getPrimaryUserId() != null) {
             return userRepository.findById(user.getPrimaryUserId())
-                    .filter(p -> p.getStatus() == UserStatus.ACTIVE);
+                    .filter(AccountLinkedUserResolverImpl::isActive);
         }
 
-        // 4. ACTIVE만 허용
-        return user.getStatus() == UserStatus.ACTIVE ? Optional.of(user) : Optional.empty();
+        // 4. ACTIVE만 허용 (null은 ACTIVE로 간주 — 신규 컬럼 도입 전 기존 row 방어)
+        return isActive(user) ? Optional.of(user) : Optional.empty();
+    }
+
+    /**
+     * null 허용 ACTIVE 판정.
+     * 2026-04-21 사건: Hibernate ddl-auto가 status 컬럼을 추가했지만 기존 row는 NULL.
+     * Java 엔티티 default는 ACTIVE이므로 null은 ACTIVE로 해석해야 레거시 유저 로그인 가능.
+     */
+    private static boolean isActive(UserB user) {
+        return user.getStatus() == null || user.getStatus() == UserStatus.ACTIVE;
     }
 
     @Override
