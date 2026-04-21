@@ -131,8 +131,13 @@ public class AccountLinkServiceImpl implements AccountLinkService {
         if (primary.getStatus() == UserStatus.WITHDRAWN) {
             return "PRIMARY_WITHDRAWN";
         }
-        if (accountLinkRepository.existsByUserIdAndStatus(primary.getId(), AccountLinkStatus.ACTIVE)) {
-            return "ALREADY_LINKED";
+        // 평생 1회 제약 (Plan Review Round 2 P1-2 — existsBy 기반):
+        //   ACTIVE 존재 → ALREADY_LINKED
+        //   ACTIVE 없지만 과거 REVOKED 이력 존재 → LIFETIME_LIMIT_EXCEEDED
+        if (accountLinkRepository.existsByUserIdAndProvider(primary.getId(), PROVIDER_TOSS)) {
+            boolean hasActive = accountLinkRepository.existsByUserIdAndProviderAndStatus(
+                    primary.getId(), PROVIDER_TOSS, AccountLinkStatus.ACTIVE);
+            return hasActive ? "ALREADY_LINKED" : "LIFETIME_LIMIT_EXCEEDED";
         }
         if (accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
                 PROVIDER_TOSS, secondary.getSocialId(), AccountLinkStatus.ACTIVE)) {
