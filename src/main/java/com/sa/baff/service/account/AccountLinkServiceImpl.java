@@ -15,15 +15,18 @@ import com.sa.baff.repository.LinkTokenRepository;
 import com.sa.baff.repository.PieceRepository;
 import com.sa.baff.repository.UserRepository;
 import com.sa.baff.repository.WeightRepository;
+import com.sa.baff.service.TossAuthService;
 import com.sa.baff.util.BattleStatus;
 import com.sa.baff.util.InviteStatus;
-import com.sa.baff.util.TossSocialIdMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -59,8 +62,10 @@ public class AccountLinkServiceImpl implements AccountLinkService {
     private final BattleInviteRepository battleInviteRepository;
     private final AccountMergeService accountMergeService;
     private final LinkTokenConsumer linkTokenConsumer;
+    private final TossAuthService tossAuthService;
 
     private final SecureRandom secureRandom = new SecureRandom();
+    private static final int NONCE_BYTE_LENGTH = 24;
 
     @Override
     public AccountLinkDto.IssueTokenResponse issueLinkToken(String primarySocialId) {
@@ -90,25 +95,36 @@ public class AccountLinkServiceImpl implements AccountLinkService {
             throw new IllegalStateException("TOKEN_EXPIRED");
         }
 
-        // 2. Primary/Secondary 조회
+        // 2. Primary 조회
         UserB primary = userRepository.findById(token.getUserId())
                 .orElseThrow(() -> new IllegalStateException("PRIMARY_NOT_FOUND"));
-        String tossSocialId = TossSocialIdMapper.toStoredSocialId(request.tossUserKey());
+
+        // 3. Toss authorizationCode → tossUserKey (mTLS 내부 교환, FE 미노출)
+        TossAuthService.TossUserKeyResult tossResult =
+                tossAuthService.resolveTossUserKey(request.authorizationCode(), request.referrer());
+        String tossSocialId = tossResult.tossUserKey();
+
+        // 4. Secondary 조회
         UserB secondary = userRepository.findBySocialId(tossSocialId)
                 .orElseThrow(() -> new IllegalStateException("SECONDARY_NOT_FOUND"));
 
-        // 3. 차단 조건 검증
+        // 5. 차단 조건 검증
         String blockReason = detectBlockReason(primary, secondary);
         if (blockReason != null) {
-            return new AccountLinkDto.PrepareResponse(false, null, null, blockReason);
+            return new AccountLinkDto.PrepareResponse(false, null, null, blockReason, null);
         }
 
-        // 4. Diff 계산
+        // 6. nonce 발급 + 해시 저장 + tossUserKey 저장 (Plan Review Round 2 P0 해소)
+        String noncePlain = generateNonce();
+        token.setTossUserKey(tossSocialId);
+        token.setPrepareNonceHash(sha256Hex(noncePlain));
+
+        // 7. Diff 계산 + 응답 (nonce 평문 반환)
         AccountLinkDto.Diff diff = calculateDiff(primary, secondary);
         AccountLinkDto.Warnings warnings = new AccountLinkDto.Warnings(
                 primary.getNickname(), true);
 
-        return new AccountLinkDto.PrepareResponse(true, diff, warnings, null);
+        return new AccountLinkDto.PrepareResponse(true, diff, warnings, null, noncePlain);
     }
 
     private String detectBlockReason(UserB primary, UserB secondary) {
@@ -229,5 +245,25 @@ public class AccountLinkServiceImpl implements AccountLinkService {
         byte[] bytes = new byte[TOKEN_BYTE_LENGTH];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String generateNonce() {
+        byte[] bytes = new byte[NONCE_BYTE_LENGTH];
+        secureRandom.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    static String sha256Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("sha256 unavailable", e);
+        }
     }
 }
