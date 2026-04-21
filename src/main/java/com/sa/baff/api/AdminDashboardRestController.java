@@ -505,6 +505,17 @@ public class AdminDashboardRestController {
         if (body.containsKey("deepLink")) config.setDeepLink((String) body.get("deepLink"));
         if (body.containsKey("thresholdDays")) config.setThresholdDays((Integer) body.get("thresholdDays"));
         if (body.containsKey("cronExpression")) config.setCronExpression((String) body.get("cronExpression"));
+        if (body.containsKey("templateCode")) config.setTemplateCode((String) body.get("templateCode"));
+        if (body.containsKey("targetStrategy")) {
+            config.setTargetStrategy(SmartPushTargetStrategy.valueOf((String) body.get("targetStrategy")));
+        }
+
+        // 가드 3: enabled=true 전환 시 templateCode 필수 (spec §3.3)
+        if (Boolean.TRUE.equals(config.getEnabled())
+                && (config.getTemplateCode() == null || config.getTemplateCode().isBlank())) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(Map.of("message", "템플릿 코드 없이 활성화할 수 없습니다."));
+        }
 
         smartPushConfigRepository.save(config);
         return ResponseEntity.ok(Map.of("message", "스마트발송 설정이 수정되었습니다."));
@@ -521,6 +532,16 @@ public class AdminDashboardRestController {
     @PostMapping("/smart-push/trigger/{pushType}")
     public ResponseEntity<Map<String, String>> triggerSmartPush(@PathVariable String pushType) {
         SmartPushType type = SmartPushType.valueOf(pushType);
+
+        // 가드 2: templateCode 없으면 수동 실행 차단 (spec §3.3)
+        SmartPushConfig config = smartPushConfigRepository.findByPushType(type).orElse(null);
+        if (config == null) {
+            return ResponseEntity.badRequest().body(Map.of("message", "스마트발송 설정이 없습니다."));
+        }
+        if (config.getTemplateCode() == null || config.getTemplateCode().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "템플릿 코드를 먼저 입력해주세요."));
+        }
+
         smartPushService.executePush(type);
         return ResponseEntity.ok(Map.of("message", "스마트발송이 실행되었습니다."));
     }

@@ -1,10 +1,15 @@
 package com.sa.baff.service;
 
-import com.sa.baff.domain.Piece;
 import com.sa.baff.domain.SmartPushConfig;
 import com.sa.baff.domain.SmartPushHistory;
-import com.sa.baff.repository.*;
+import com.sa.baff.model.SmartPushRecipient;
+import com.sa.baff.repository.SmartPushConfigRepository;
+import com.sa.baff.repository.SmartPushHistoryRepository;
+import com.sa.baff.service.notification.TossMessageApiClient;
+import com.sa.baff.util.SmartPushTargetStrategy;
 import com.sa.baff.util.SmartPushType;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,91 +18,239 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
+/**
+ * 스마트발송 서비스 (spec §3).
+ *
+ * CP1 Round 2 P0 반영:
+ * - 발송 대상을 List<SmartPushRecipient>로 반환 (병합 Primary 커버)
+ * - executePush에서 recipient.tossUserKey()로 발송, recipient.userId()로 이력 저장
+ * - 일일 중복 방지 가드 (existsByUserIdAndPushTypeAndRegDateTimeAfter)
+ * - buildContext 훅 (현재 빈 Map)
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class SmartPushServiceImpl implements SmartPushService {
 
-    private static final long EXCHANGE_MIN_BALANCE = 100L;
-
     private final SmartPushConfigRepository configRepository;
     private final SmartPushHistoryRepository historyRepository;
-    private final PieceRepository pieceRepository;
-    private final UserAttendanceRepository attendanceRepository;
-    private final ExchangeHistoryRepository exchangeHistoryRepository;
+    private final TossMessageApiClient tossMessageApiClient;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    /**
+     * 토스 발송 가능 유저 전체 (spec §3.2).
+     *
+     * 2경로 UNION:
+     *   1) 직접 토스 가입자: users.provider='toss' OR platform='TOSS'
+     *   2) 병합 Primary: account_links.provider='toss' AND status='ACTIVE' JOIN users.status='ACTIVE'
+     *
+     * userId 기준 중복 제거는 구조상 발생 불가 (병합 시 secondary는 MERGED 상태로 제외됨).
+     */
     @Override
-    public List<Long> findExchangeReminderTargets(int thresholdDays) {
-        LocalDateTime cutoff = LocalDate.now().minusDays(thresholdDays).atStartOfDay();
-
-        // balance >= 100g인 사용자 중, 마지막 환전이 cutoff 이전이거나 환전 이력 없는 사용자
-        List<Piece> piecesWithBalance = pieceRepository.findAll().stream()
-                .filter(p -> p.getBalance() >= EXCHANGE_MIN_BALANCE)
-                .collect(Collectors.toList());
-
-        return piecesWithBalance.stream()
-                .map(p -> p.getUser().getId())
-                .collect(Collectors.toList());
+    @SuppressWarnings("unchecked")
+    public List<SmartPushRecipient> findAllTossRecipients() {
+        String sql = """
+                SELECT u."userId" AS user_id, u.social_id AS toss_user_key
+                  FROM users u
+                 WHERE u."delYn" = 'N'
+                   AND u.status = 'ACTIVE'
+                   AND u.social_id IS NOT NULL
+                   AND (u.provider = 'toss' OR u.platform = 'TOSS')
+                UNION
+                SELECT u."userId" AS user_id, al.provider_user_id AS toss_user_key
+                  FROM users u
+                  JOIN account_links al ON al.user_id = u."userId"
+                 WHERE u."delYn" = 'N'
+                   AND u.status = 'ACTIVE'
+                   AND al.provider = 'toss'
+                   AND al.status = 'ACTIVE'
+                """;
+        List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
+        return rows.stream().map(r -> new SmartPushRecipient(
+                ((Number) r[0]).longValue(),
+                (String) r[1]
+        )).toList();
     }
 
+    /**
+     * 최근 7일 활동 + 오늘 미출석 Recipient (spec §3.2).
+     *
+     * 기존 findAttendanceReminderTargets 로직 + findAllTossRecipients()와 같은 2경로 UNION 구조.
+     */
     @Override
-    public List<Long> findAttendanceReminderTargets() {
+    @SuppressWarnings("unchecked")
+    public List<SmartPushRecipient> findAttendanceReminderRecipients() {
         LocalDate today = LocalDate.now();
         LocalDate weekAgo = today.minusDays(7);
+        LocalDate yesterday = today.minusDays(1);
 
-        // 오늘 미출석 + 최근 7일 내 출석 이력 있는 사용자
-        List<Long> recentActiveUserIds = attendanceRepository
-                .findUserIdsWithAttendanceBetween(weekAgo, today.minusDays(1));
-
-        List<Long> todayAttendedUserIds = attendanceRepository
-                .findUserIdsByAttendanceDate(today);
-
-        return recentActiveUserIds.stream()
-                .filter(userId -> !todayAttendedUserIds.contains(userId))
-                .collect(Collectors.toList());
+        String sql = """
+                WITH candidates AS (
+                    -- 경로 1: 직접 토스 가입자
+                    SELECT u."userId" AS user_id, u.social_id AS toss_user_key
+                      FROM users u
+                     WHERE u."delYn" = 'N'
+                       AND u.status = 'ACTIVE'
+                       AND u.social_id IS NOT NULL
+                       AND (u.provider = 'toss' OR u.platform = 'TOSS')
+                    UNION
+                    -- 경로 2: 병합 Primary
+                    SELECT u."userId" AS user_id, al.provider_user_id AS toss_user_key
+                      FROM users u
+                      JOIN account_links al ON al.user_id = u."userId"
+                     WHERE u."delYn" = 'N'
+                       AND u.status = 'ACTIVE'
+                       AND al.provider = 'toss'
+                       AND al.status = 'ACTIVE'
+                )
+                SELECT c.user_id, c.toss_user_key
+                  FROM candidates c
+                 WHERE EXISTS (
+                           SELECT 1 FROM user_attendances ua
+                            WHERE ua.user_id = c.user_id
+                              AND ua.attendance_date BETWEEN :weekAgo AND :yesterday
+                       )
+                   AND NOT EXISTS (
+                           SELECT 1 FROM user_attendances ua
+                            WHERE ua.user_id = c.user_id
+                              AND ua.attendance_date = :today
+                       )
+                """;
+        List<Object[]> rows = entityManager.createNativeQuery(sql)
+                .setParameter("weekAgo", weekAgo)
+                .setParameter("yesterday", yesterday)
+                .setParameter("today", today)
+                .getResultList();
+        return rows.stream().map(r -> new SmartPushRecipient(
+                ((Number) r[0]).longValue(),
+                (String) r[1]
+        )).toList();
     }
 
+    /**
+     * 그램 100g 이상 보유 Recipient (spec §3.2).
+     *
+     * 기존 findExchangeReminderTargets 로직 + 2경로 UNION 구조.
+     * thresholdDays 파라미터는 향후 "마지막 환전 후 N일 경과" 조건 확장용으로 보존 (현재 미사용).
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<SmartPushRecipient> findExchangeReminderRecipients(int thresholdDays) {
+        String sql = """
+                WITH candidates AS (
+                    SELECT u."userId" AS user_id, u.social_id AS toss_user_key
+                      FROM users u
+                     WHERE u."delYn" = 'N'
+                       AND u.status = 'ACTIVE'
+                       AND u.social_id IS NOT NULL
+                       AND (u.provider = 'toss' OR u.platform = 'TOSS')
+                    UNION
+                    SELECT u."userId" AS user_id, al.provider_user_id AS toss_user_key
+                      FROM users u
+                      JOIN account_links al ON al.user_id = u."userId"
+                     WHERE u."delYn" = 'N'
+                       AND u.status = 'ACTIVE'
+                       AND al.provider = 'toss'
+                       AND al.status = 'ACTIVE'
+                )
+                SELECT c.user_id, c.toss_user_key
+                  FROM candidates c
+                  JOIN pieces p ON p.user_id = c.user_id
+                 WHERE p.balance >= 100
+                """;
+        List<Object[]> rows = entityManager.createNativeQuery(sql).getResultList();
+        return rows.stream().map(r -> new SmartPushRecipient(
+                ((Number) r[0]).longValue(),
+                (String) r[1]
+        )).toList();
+    }
+
+    /**
+     * 스마트발송 실행 (spec §3.5).
+     *
+     * 가드 순서:
+     *   1) config 존재 확인
+     *   2) enabled 확인
+     *   3) templateCode blank 확인 (CP1 G4 가드 1)
+     *   4) Recipient 루프에서 일일 중복 방지 (CP1 Round 2 §2)
+     */
     @Override
     public void executePush(SmartPushType pushType) {
         Optional<SmartPushConfig> configOpt = configRepository.findByPushType(pushType);
         if (configOpt.isEmpty()) {
-            log.info("스마트발송 설정 없음: {}", pushType);
+            log.info("[SmartPush] 설정 없음: {}", pushType);
             return;
         }
 
         SmartPushConfig config = configOpt.get();
         if (!config.getEnabled()) {
-            log.info("스마트발송 비활성: {}", pushType);
+            log.info("[SmartPush] 비활성: {}", pushType);
             return;
         }
 
-        List<Long> targetUserIds;
-        switch (pushType) {
-            case EXCHANGE_REMINDER ->
-                    targetUserIds = findExchangeReminderTargets(
-                            config.getThresholdDays() != null ? config.getThresholdDays() : 7);
-            case ATTENDANCE_REMINDER ->
-                    targetUserIds = findAttendanceReminderTargets();
-            default -> {
-                log.warn("알 수 없는 스마트발송 타입: {}", pushType);
-                return;
+        if (config.getTemplateCode() == null || config.getTemplateCode().isBlank()) {
+            log.warn("[SmartPush] templateCode 미입력으로 skip: type={}", pushType);
+            return;
+        }
+
+        SmartPushTargetStrategy strategy = config.getTargetStrategy() != null
+                ? config.getTargetStrategy()
+                : SmartPushTargetStrategy.ALL_TOSS_USERS;
+
+        List<SmartPushRecipient> recipients = switch (strategy) {
+            case ALL_TOSS_USERS -> findAllTossRecipients();
+            case ACTIVE_LAST_7_DAYS_NOT_ATTENDED -> findAttendanceReminderRecipients();
+            case BALANCE_OVER_100G -> findExchangeReminderRecipients(
+                    config.getThresholdDays() != null ? config.getThresholdDays() : 7);
+        };
+
+        log.info("[SmartPush] 발송 대상: type={}, strategy={}, count={}",
+                pushType, strategy, recipients.size());
+
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        int successCount = 0;
+        int failCount = 0;
+        int skipCount = 0;
+
+        for (SmartPushRecipient recipient : recipients) {
+            // 일일 중복 방지 가드 (수동 실행 오조작 방어)
+            if (historyRepository.existsByUserIdAndPushTypeAndRegDateTimeAfter(
+                    recipient.userId(), pushType, todayStart)) {
+                skipCount++;
+                continue;
             }
+
+            Map<String, String> context = buildContext(pushType, recipient.userId());
+            TossMessageApiClient.SendResult result = tossMessageApiClient
+                    .sendMessageWithDetail(recipient.tossUserKey(), config.getTemplateCode(), context);
+
+            String apiResponse = result.success()
+                    ? "SUCCESS"
+                    : String.format("FAIL: %s / %s", result.errorCode(), result.errorReason());
+
+            historyRepository.save(new SmartPushHistory(
+                    recipient.userId(), pushType, apiResponse, result.success()));
+
+            if (result.success()) successCount++;
+            else failCount++;
         }
 
-        log.info("스마트발송 대상: type={}, count={}", pushType, targetUserIds.size());
+        log.info("[SmartPush] 발송 완료: type={}, total={}, success={}, fail={}, skip={}",
+                pushType, recipients.size(), successCount, failCount, skipCount);
+    }
 
-        // TODO: 토스 스마트발송 API 연동 시 여기서 실제 발송
-        // 현재는 대상 추출 + 이력 기록만 수행
-        for (Long userId : targetUserIds) {
-            SmartPushHistory history = new SmartPushHistory(
-                    userId, pushType, "토스 API 미연동 (대기 중)", false);
-            historyRepository.save(history);
-        }
-
-        log.info("스마트발송 완료: type={}, processed={}", pushType, targetUserIds.size());
+    /**
+     * 템플릿 변수 context 구성 (spec §3.5 — CP1 Round 2 §2 권장 훅).
+     *
+     * 현재는 빈 Map. 추후 개인화 메시지(N번째 출석, 보유 그램 등) 도입 시 분기.
+     */
+    private Map<String, String> buildContext(SmartPushType pushType, Long userId) {
+        return Map.of();
     }
 }
