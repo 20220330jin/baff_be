@@ -19,6 +19,14 @@
 psql $DATABASE_URL -f src/main/resources/migrations/V001__account_integration_schema.sql
 ```
 
+### 1.2.5 V002 SQL 실행 (Phase 1.5 v3)
+```bash
+psql $DATABASE_URL -f src/main/resources/migrations/V002__link_token_toss_user_key_and_nonce.sql
+```
+- 반드시 V001 이후 실행
+- link_tokens에 `toss_user_key` + `prepare_nonce_hash` 컬럼 추가 (nullable)
+- `ix_link_tokens_toss_user_key` partial index 생성
+
 ### 1.3 검증 쿼리 (필수)
 ```sql
 SELECT
@@ -51,6 +59,11 @@ SELECT indexname, indexdef FROM pg_indexes
 ## 5. 롤백 (치명 버그 시)
 
 ```sql
+-- 5.0 V002 롤백 (V001보다 먼저)
+DROP INDEX IF EXISTS ix_link_tokens_toss_user_key;
+ALTER TABLE link_tokens DROP COLUMN IF EXISTS toss_user_key;
+ALTER TABLE link_tokens DROP COLUMN IF EXISTS prepare_nonce_hash;
+
 -- 5.1 partial unique index 제거
 DROP INDEX IF EXISTS ux_account_links_active_provider_user;
 DROP INDEX IF EXISTS ux_account_links_active_user;

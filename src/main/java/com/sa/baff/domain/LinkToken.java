@@ -45,6 +45,12 @@ public class LinkToken extends BaseEntity {
     @Column(name = "idempotency_response", columnDefinition = "TEXT")
     private String idempotencyResponse;
 
+    @Column(name = "toss_user_key", length = 255)
+    private String tossUserKey;
+
+    @Column(name = "prepare_nonce_hash", length = 64)
+    private String prepareNonceHash;
+
     public LinkToken(String token, Long userId, LocalDateTime expiresAt) {
         this.token = token;
         this.userId = userId;
