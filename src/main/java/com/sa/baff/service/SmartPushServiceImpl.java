@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,14 +28,19 @@ import java.util.Optional;
  * CP1 Round 2 P0 반영:
  * - 발송 대상을 List<SmartPushRecipient>로 반환 (병합 Primary 커버)
  * - executePush에서 recipient.tossUserKey()로 발송, recipient.userId()로 이력 저장
- * - 일일 중복 방지 가드 (existsByUserIdAndPushTypeAndRegDateTimeAfter)
  * - buildContext 훅 (현재 빈 Map)
+ *
+ * CP2 P1/P2 반영:
+ * - 중복 방지는 success=true 이력만 기준 → 실패 이력은 당일 재시도 허용
+ * - 날짜 경계는 Asia/Seoul TZ 고정 (스케줄러 zone과 일치)
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class SmartPushServiceImpl implements SmartPushService {
+
+    private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
 
     private final SmartPushConfigRepository configRepository;
     private final SmartPushHistoryRepository historyRepository;
@@ -86,7 +92,7 @@ public class SmartPushServiceImpl implements SmartPushService {
     @Override
     @SuppressWarnings("unchecked")
     public List<SmartPushRecipient> findAttendanceReminderRecipients() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(SEOUL_ZONE);
         LocalDate weekAgo = today.minusDays(7);
         LocalDate yesterday = today.minusDays(1);
 
@@ -213,15 +219,15 @@ public class SmartPushServiceImpl implements SmartPushService {
         log.info("[SmartPush] 발송 대상: type={}, strategy={}, count={}",
                 pushType, strategy, recipients.size());
 
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime todayStart = LocalDate.now(SEOUL_ZONE).atStartOfDay();
         int successCount = 0;
         int failCount = 0;
         int skipCount = 0;
 
         for (SmartPushRecipient recipient : recipients) {
-            // 일일 중복 방지 가드 (수동 실행 오조작 방어)
-            if (historyRepository.existsByUserIdAndPushTypeAndRegDateTimeAfter(
-                    recipient.userId(), pushType, todayStart)) {
+            // 일일 중복 방지 가드 (CP2 P1 반영): 성공 이력만 기준 → 실패는 당일 재시도 가능
+            if (historyRepository.existsByUserIdAndPushTypeAndSuccessAndRegDateTimeAfter(
+                    recipient.userId(), pushType, true, todayStart)) {
                 skipCount++;
                 continue;
             }

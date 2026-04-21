@@ -14,7 +14,10 @@ public interface SmartPushHistoryRepository extends JpaRepository<SmartPushHisto
 
     Page<SmartPushHistory> findAllByOrderByRegDateTimeDesc(Pageable pageable);
 
-    /** 일일 중복 방지 가드 (spec §3.5 — CP1 Round 2 §2 권장) */
-    boolean existsByUserIdAndPushTypeAndRegDateTimeAfter(
-            Long userId, SmartPushType pushType, LocalDateTime since);
+    /**
+     * 일일 중복 방지 가드 (spec §3.5 — CP2 P1 반영).
+     * success=true 이력만 기준으로 체크. 실패 이력이 있으면 당일 재시도 가능.
+     */
+    boolean existsByUserIdAndPushTypeAndSuccessAndRegDateTimeAfter(
+            Long userId, SmartPushType pushType, Boolean success, LocalDateTime since);
 }
