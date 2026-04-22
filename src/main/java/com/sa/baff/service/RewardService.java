@@ -1,5 +1,6 @@
 package com.sa.baff.service;
 
+import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.RewardDto;
 
 public interface RewardService {
@@ -24,4 +25,7 @@ public interface RewardService {
 
     /** 광고 이벤트 기록 */
     void recordAdEvent(String socialId, String watchLocation, Long referenceId, String tossAdResponse);
+
+    /** S6-15 프로필 완성 보너스 지급 (최초 height 입력 시 1회, dedup 내부 처리) */
+    void claimProfileBonus(Long userId, UserB user);
 }
