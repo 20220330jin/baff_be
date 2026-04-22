@@ -347,4 +347,31 @@ public class AdminDashboardDto {
         private Integer rewardedAdGrams;
         private Integer interstitialAdGrams;
     }
+
+    /**
+     * S6-16 — 그램경제 스냅샷 (나만그래 pieceEconomyResponse 참조, 체인지업 MVP 단순화).
+     *
+     *  발행: totalEarned(누적) + todayIssued(오늘 REWARD_*)
+     *  유통: circulating(현재 잔액 합) + holdersCount + avgBalance
+     *  전환: totalExchanged(누적) + todayExchanged(오늘 EXCHANGE_REQUEST) + exchangeRate(전환율 %)
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GramEconomySnapshot {
+        // 발행
+        private long totalEarned;
+        private long todayIssued;
+
+        // 유통
+        private long circulating;
+        private long holdersCount;
+        private long avgBalance;
+
+        // 전환
+        private long totalExchanged;
+        private long todayExchanged;
+        private double exchangeRate;   // totalExchanged / totalEarned * 100
+    }
 }

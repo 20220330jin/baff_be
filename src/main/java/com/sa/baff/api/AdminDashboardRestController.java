@@ -546,4 +546,11 @@ public class AdminDashboardRestController {
         smartPushService.executePush(type);
         return ResponseEntity.ok(Map.of("message", "스마트발송이 실행되었습니다."));
     }
+
+    // ===== 그램경제 스냅샷 (S6-16) =====
+
+    @GetMapping("/gram-economy/snapshot")
+    public ResponseEntity<AdminDashboardDto.GramEconomySnapshot> getGramEconomySnapshot() {
+        return ResponseEntity.ok(adminDashboardService.getGramEconomySnapshot());
+    }
 }
