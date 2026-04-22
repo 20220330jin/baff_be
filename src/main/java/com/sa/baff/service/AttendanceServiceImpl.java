@@ -156,16 +156,23 @@ public class AttendanceServiceImpl implements AttendanceService {
         LocalDate today = LocalDate.now();
         Collection<AttendanceSource> streakSources = streakSourcesFor(userId);
 
-        // 오늘/어제 조회 (병합 후 source 필터)
-        Optional<UserAttendance> todayRecord = streakSources == null
-                ? userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today)
-                : userAttendanceRepository.findByUserIdAndAttendanceDateAndSourceIn(userId, today, streakSources);
-        boolean attendedToday = todayRecord.isPresent();
+        // S3-15 P1-4: attendedToday는 전체 source 기준으로 판정.
+        // checkAttendance의 DB unique 제약이 (user_id, attendance_date)라 source 무관 중복 불가.
+        // 병합 사용자가 오늘 WEB에서만 출석한 경우 FE가 attendedToday=false로 보고 버튼 노출 → API가 "이미 출석" 에러를 반환하는 UX 불일치를 제거.
+        Optional<UserAttendance> todayAnySource =
+                userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today);
+        boolean attendedToday = todayAnySource.isPresent();
 
-        // 현재 스트릭
+        // streak 산정용 오늘 row는 여전히 source 필터 (spec §6.3 — 병합 후 WEB은 streak 제외)
+        Optional<UserAttendance> todayRecord = streakSources == null
+                ? todayAnySource
+                : userAttendanceRepository.findByUserIdAndAttendanceDateAndSourceIn(userId, today, streakSources);
+
+        // 현재 스트릭 — streak 포함 source(todayRecord)가 있으면 그 값, 아니면 어제 기반.
+        // P1-4: 병합 사용자가 오늘 WEB에서만 출석한 경우 attendedToday=true지만 todayRecord empty → 어제 streak 유지.
         int currentStreak;
-        if (attendedToday) {
-            currentStreak = todayRecord.map(UserAttendance::getStreakCount).orElse(0);
+        if (todayRecord.isPresent()) {
+            currentStreak = todayRecord.get().getStreakCount();
         } else {
             Optional<UserAttendance> yesterdayRecord = streakSources == null
                     ? userAttendanceRepository.findByUserIdAndAttendanceDate(userId, today.minusDays(1))

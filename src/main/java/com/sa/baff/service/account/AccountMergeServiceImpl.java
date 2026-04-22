@@ -98,6 +98,7 @@ public class AccountMergeServiceImpl implements AccountMergeService {
                 .setParameter("p", primary).setParameter("s", secondary).executeUpdate();
 
         // 7. AiAnalysis 최신 유지 병합 (spec §3.3)
+        // S3-15 P1-5: primary.analyzed_at IS NULL 케이스 방어 (null 비교는 null 반환 → UPDATE 미적용)
         em.createNativeQuery(
                 "UPDATE ai_analysis p SET " +
                 "  analyzed_at = s.analyzed_at, " +
@@ -107,7 +108,7 @@ public class AccountMergeServiceImpl implements AccountMergeService {
                 "FROM ai_analysis s " +
                 "WHERE p.user_id = :pId AND s.user_id = :sId " +
                 "  AND p.feature_type = s.feature_type " +
-                "  AND s.analyzed_at > p.analyzed_at")
+                "  AND (p.analyzed_at IS NULL OR s.analyzed_at > p.analyzed_at)")
                 .setParameter("pId", primaryUserId).setParameter("sId", secondaryUserId).executeUpdate();
         em.createQuery(
                 "DELETE FROM AiAnalysis a WHERE a.userId = :sId " +

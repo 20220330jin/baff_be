@@ -24,4 +24,11 @@ public interface AccountLinkRepository extends CrudRepository<AccountLink, Long>
     boolean existsByUserIdAndProvider(Long userId, String provider);
 
     boolean existsByUserIdAndProviderAndStatus(Long userId, String provider, AccountLinkStatus status);
+
+    /**
+     * 동일 외부 identity(provider, providerUserId) 기준 과거 이력 존재 여부 (status 무관).
+     * S3-15 P1-2 CP2 Round 2 — 탈퇴 후 재가입으로 "평생 1회" 우회를 차단.
+     * 새 Primary userId라도 동일 Toss identity가 과거 ACTIVE/REVOKED 이력 있으면 재연결 불가.
+     */
+    boolean existsByProviderAndProviderUserId(String provider, String providerUserId);
 }

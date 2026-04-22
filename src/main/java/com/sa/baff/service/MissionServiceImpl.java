@@ -24,7 +24,8 @@ import java.util.Random;
 @Transactional
 public class MissionServiceImpl implements MissionService {
 
-    private static final int WEEKLY_ATTENDANCE_TARGET = 4;
+    // S6-8: 대표님 지시 (2026-04-22) — 출석 3일, 체중기록 3일 (기존 출석 4 → 3)
+    private static final int WEEKLY_ATTENDANCE_TARGET = 3;
     private static final int WEEKLY_WEIGHT_LOG_TARGET = 3;
     private static final int DEFAULT_MISSION_REWARD = 5;
 

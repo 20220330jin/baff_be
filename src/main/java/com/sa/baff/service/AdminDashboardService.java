@@ -57,4 +57,7 @@ public interface AdminDashboardService {
     // === 토스광고 설정 ===
     List<AdminDashboardDto.TossAdPositionConfig> getTossAdConfigs();
     void updateTossAdConfig(String position, AdminDashboardDto.UpdateTossAdConfigRequest request);
+
+    // === 그램경제 스냅샷 (S6-16) ===
+    AdminDashboardDto.GramEconomySnapshot getGramEconomySnapshot();
 }

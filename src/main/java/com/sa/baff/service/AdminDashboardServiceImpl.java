@@ -10,6 +10,7 @@ import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.AdWatchLocation;
 import com.sa.baff.util.BattleStatus;
 import com.sa.baff.util.DateTimeUtils;
+import com.sa.baff.util.PieceTransactionType;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -43,6 +44,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final BattleRoomRepository battleRoomRepository;
     private final NoticeRepository noticeRepository;
     private final PieceRepository pieceRepository;
+    private final PieceTransactionRepository pieceTransactionRepository;
     private final LoginHistoryRepository loginHistoryRepository;
     private final RewardConfigRepository rewardConfigRepository;
     private final RewardHistoryRepository rewardHistoryRepository;
@@ -937,5 +939,48 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (request.getInterstitialAdGrams() != null) config.setInterstitialAdGrams(request.getInterstitialAdGrams());
 
         adPositionConfigRepository.save(config);
+    }
+
+    // ===== S6-16 그램경제 스냅샷 =====
+
+    @Override
+    public AdminDashboardDto.GramEconomySnapshot getGramEconomySnapshot() {
+        long totalEarned = pieceRepository.sumTotalEarned();
+        long totalExchanged = pieceRepository.sumTotalExchanged();
+        long circulating = pieceRepository.sumCirculating();
+        long holdersCount = pieceRepository.countHolders();
+        long avgBalance = holdersCount > 0 ? circulating / holdersCount : 0L;
+
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        long todayIssued = pieceTransactionRepository.sumAmountByTypesFrom(
+                List.of(
+                        PieceTransactionType.REWARD_WEIGHT_LOG,
+                        PieceTransactionType.REWARD_REVIEW,
+                        PieceTransactionType.REWARD_ATTENDANCE,
+                        PieceTransactionType.REWARD_STREAK_ATTENDANCE,
+                        PieceTransactionType.REWARD_AD_BONUS,
+                        PieceTransactionType.REWARD_MISSION,
+                        PieceTransactionType.REWARD_SIGNUP_BONUS,
+                        PieceTransactionType.DEPOSIT
+                ),
+                todayStart);
+        long todayExchanged = pieceTransactionRepository.sumAmountByTypesFrom(
+                List.of(PieceTransactionType.EXCHANGE_REQUEST),
+                todayStart);
+
+        double exchangeRate = totalEarned > 0
+                ? Math.round(((double) totalExchanged / totalEarned) * 10000.0) / 100.0
+                : 0.0;
+
+        return AdminDashboardDto.GramEconomySnapshot.builder()
+                .totalEarned(totalEarned)
+                .todayIssued(todayIssued)
+                .circulating(circulating)
+                .holdersCount(holdersCount)
+                .avgBalance(avgBalance)
+                .totalExchanged(totalExchanged)
+                .todayExchanged(todayExchanged)
+                .exchangeRate(exchangeRate)
+                .build();
     }
 }

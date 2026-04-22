@@ -18,4 +18,17 @@ public interface PieceRepository extends JpaRepository<Piece, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT p FROM Piece p WHERE p.user = :user")
     Optional<Piece> findByUserForUpdate(@Param("user") UserB user);
+
+    // S6-16 — 그램경제 스냅샷 집계 (나만그래 pieceEconomyResponse 참조)
+    @Query("SELECT COALESCE(SUM(p.balance), 0) FROM Piece p")
+    long sumCirculating();
+
+    @Query("SELECT COALESCE(SUM(p.totalEarned), 0) FROM Piece p")
+    long sumTotalEarned();
+
+    @Query("SELECT COALESCE(SUM(p.totalExchanged), 0) FROM Piece p")
+    long sumTotalExchanged();
+
+    @Query("SELECT COUNT(p) FROM Piece p WHERE p.balance > 0")
+    long countHolders();
 }

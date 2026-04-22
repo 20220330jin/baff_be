@@ -8,6 +8,8 @@ public enum RewardType {
     ATTENDANCE_STREAK,       // 연속 출석 보너스
     ATTENDANCE_AD_BONUS,     // 출석 광고 보너스
     WEIGHT_AD_BONUS,         // 체중 기록 광고 보너스
+    SIGNUP_BONUS,            // S6-14 가입 축하 (첫 grantWeightReward 호출 시 1회 지급)
+    PROFILE_BONUS,           // S6-15 프로필 완성 보너스 (최초 height 입력 시 1회 지급)
 
     // Phase 2 (예약)
     STREAK_WEIGHT,           // 체중 기록 스트릭

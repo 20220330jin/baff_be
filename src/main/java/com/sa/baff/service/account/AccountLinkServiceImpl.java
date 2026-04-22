@@ -139,14 +139,20 @@ public class AccountLinkServiceImpl implements AccountLinkService {
                     primary.getId(), PROVIDER_TOSS, AccountLinkStatus.ACTIVE);
             return hasActive ? "ALREADY_LINKED" : "LIFETIME_LIMIT_EXCEEDED";
         }
-        if (accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
-                PROVIDER_TOSS, secondary.getSocialId(), AccountLinkStatus.ACTIVE)) {
-            return "TOSS_ALREADY_LINKED";
+        // S3-15 P1-2 CP2 Round 2: Toss identity(providerUserId) 기준 평생 1회 차단.
+        // 탈퇴 → 재가입으로 새 userId 할당되어 위 "primary.id 기준" 판정을 우회해도,
+        // 동일 Toss identity가 과거 연결된 이력이 있으면 재연결 불가.
+        //   ACTIVE 존재 → TOSS_ALREADY_LINKED (다른 Primary에 연결 중)
+        //   ACTIVE 없지만 REVOKED 이력 존재 → LIFETIME_LIMIT_EXCEEDED (탈퇴 후 재연결 시도)
+        if (accountLinkRepository.existsByProviderAndProviderUserId(PROVIDER_TOSS, secondary.getSocialId())) {
+            boolean hasActive = accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
+                    PROVIDER_TOSS, secondary.getSocialId(), AccountLinkStatus.ACTIVE);
+            return hasActive ? "TOSS_ALREADY_LINKED" : "LIFETIME_LIMIT_EXCEEDED";
         }
         if (battleParticipantRepository.existsActiveByUserId(primary.getId(), ACTIVE_BATTLE_STATUSES)
                 || battleParticipantRepository.existsActiveByUserId(secondary.getId(), ACTIVE_BATTLE_STATUSES)
-                || battleInviteRepository.existsPendingByUserId(primary.getId(), InviteStatus.PENDING)
-                || battleInviteRepository.existsPendingByUserId(secondary.getId(), InviteStatus.PENDING)) {
+                || battleInviteRepository.existsPendingByUserId(primary.getId(), InviteStatus.PENDING, ACTIVE_BATTLE_STATUSES)
+                || battleInviteRepository.existsPendingByUserId(secondary.getId(), InviteStatus.PENDING, ACTIVE_BATTLE_STATUSES)) {
             return "ACTIVE_BATTLE";
         }
         return null;
@@ -174,15 +180,23 @@ public class AccountLinkServiceImpl implements AccountLinkService {
 
     @Override
     public AccountLinkDto.ConfirmResponse confirmLink(AccountLinkDto.ConfirmRequest request) {
-        // 1. 멱등성: 이미 처리된 요청인지 확인
-        Optional<LinkToken> existing = linkTokenRepository.findByIdempotencyKey(request.idempotencyKey());
-        if (existing.isPresent() && existing.get().getIdempotencyResponse() != null) {
-            return parseConfirmResponse(existing.get().getIdempotencyResponse());
+        // 1. 토큰 비관적 락 획득 (S3-15 P1-1 CP2 Round 2)
+        //    동시 confirm 요청을 토큰 단위로 직렬화 → idempotencyResponse 캐시 경로가 안정적으로 히트.
+        //    락을 못 잡고 대기하던 요청은 선행 커밋 후 같은 토큰 row를 읽어 아래 멱등 캐시로 분기.
+        LinkToken token = linkTokenRepository.findByTokenForUpdate(request.linkToken())
+                .orElseThrow(() -> new IllegalStateException("TOKEN_EXPIRED"));
+
+        // 2. 멱등성: 이미 처리된 요청이면 같은 응답 반환 (락 아래 판정이라 race-safe)
+        if (token.getIdempotencyResponse() != null) {
+            return parseConfirmResponse(token.getIdempotencyResponse());
         }
 
-        // 2. 토큰 유효성
-        LinkToken token = linkTokenRepository.findByToken(request.linkToken())
-                .orElseThrow(() -> new IllegalStateException("TOKEN_EXPIRED"));
+        // 3. status 판정 (락 아래이므로 CONFIRMING은 이론상 희박. lock_until 만료 등 엣지 케이스 대비)
+        //    - CONFIRMING: 이전 요청이 중단되었으나 idempotencyResponse 미커밋 → 재시도 시그널 IN_PROGRESS
+        //    - PENDING 아닌 그 외 상태 / 만료: TOKEN_EXPIRED
+        if (token.getStatus() == LinkTokenStatus.CONFIRMING) {
+            throw new IllegalStateException("IN_PROGRESS");
+        }
         if (token.getStatus() != LinkTokenStatus.PENDING
                 || token.getExpiresAt().isBefore(LocalDateTime.now())) {
             throw new IllegalStateException("TOKEN_EXPIRED");
@@ -200,11 +214,23 @@ public class AccountLinkServiceImpl implements AccountLinkService {
             throw new IllegalStateException("INVALID_NONCE");
         }
 
-        // 5. Primary/Secondary 조회
-        UserB primary = userRepository.findById(token.getUserId())
-                .orElseThrow(() -> new IllegalStateException("PRIMARY_NOT_FOUND"));
-        UserB secondary = userRepository.findBySocialId(tossSocialId)
-                .orElseThrow(() -> new IllegalStateException("SECONDARY_NOT_FOUND"));
+        // 5. Primary/Secondary 조회 + 비관적 락
+        // S3-15 P1-2: ID 정렬 순서로 SELECT FOR UPDATE → deadlock 방지 + TOCTOU 창 제거
+        Long primaryId = token.getUserId();
+        Long secondaryId = userRepository.findBySocialId(tossSocialId)
+                .orElseThrow(() -> new IllegalStateException("SECONDARY_NOT_FOUND"))
+                .getId();
+
+        Long firstId = Math.min(primaryId, secondaryId);
+        Long secondId = Math.max(primaryId, secondaryId);
+        UserB first = userRepository.findByIdForUpdate(firstId)
+                .orElseThrow(() -> new IllegalStateException(
+                        primaryId.equals(firstId) ? "PRIMARY_NOT_FOUND" : "SECONDARY_NOT_FOUND"));
+        UserB second = userRepository.findByIdForUpdate(secondId)
+                .orElseThrow(() -> new IllegalStateException(
+                        primaryId.equals(secondId) ? "PRIMARY_NOT_FOUND" : "SECONDARY_NOT_FOUND"));
+        UserB primary = primaryId.equals(firstId) ? first : second;
+        UserB secondary = primaryId.equals(firstId) ? second : first;
 
         // 6. TOCTOU 재검증
         String blockReason = detectBlockReason(primary, secondary);
