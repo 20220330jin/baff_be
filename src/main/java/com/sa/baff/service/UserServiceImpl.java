@@ -41,6 +41,8 @@ public class UserServiceImpl implements UserService {
     private final TossAuthService tossAuthService;
     // S3-15 P1-3: 탈퇴 시 AccountLink revoke + Secondary 연쇄 탈퇴 (spec §3.4, §6.4)
     private final AccountLinkRepository accountLinkRepository;
+    // S6-15: 최초 height 입력 시 프로필 완성 보너스 지급
+    private final RewardService rewardService;
 
     @Override
     public UserDto getUserInfo(String userId) {
@@ -108,6 +110,9 @@ public class UserServiceImpl implements UserService {
         UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setHeight(height);
         userRepository.save(user);
+
+        // S6-15 프로필 완성 보너스 (최초 1회, dedup/실패는 RewardService 내부에서 swallow)
+        rewardService.claimProfileBonus(user.getId(), user);
     }
 
     @Override

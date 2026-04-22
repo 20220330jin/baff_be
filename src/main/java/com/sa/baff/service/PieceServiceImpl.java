@@ -154,6 +154,8 @@ public class PieceServiceImpl implements PieceService {
             case REWARD_STREAK_ATTENDANCE -> "연속 출석 보너스";
             case REWARD_AD_BONUS -> "광고 보너스";
             case REWARD_MISSION -> "미션 완료 리워드";
+            case REWARD_SIGNUP_BONUS -> "가입 축하 리워드";
+            case REWARD_PROFILE_BONUS -> "프로필 완성 리워드";
             case EXCHANGE_REQUEST -> "환전 요청";
             case EXCHANGE_SUCCESS -> "환전 완료";
             case EXCHANGE_FAILED_REFUND -> "환전 실패 환불";

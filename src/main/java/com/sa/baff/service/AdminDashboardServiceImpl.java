@@ -960,6 +960,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         PieceTransactionType.REWARD_STREAK_ATTENDANCE,
                         PieceTransactionType.REWARD_AD_BONUS,
                         PieceTransactionType.REWARD_MISSION,
+                        PieceTransactionType.REWARD_SIGNUP_BONUS,
                         PieceTransactionType.DEPOSIT
                 ),
                 todayStart);

@@ -38,6 +38,10 @@ public class RewardServiceImpl implements RewardService {
         UserB user = findUser(socialId);
         Long userId = user.getId();
 
+        // S6-14: 첫 체중 리워드 호출 시점에 가입 축하 보너스 지급 (1회성, 내부 dedup + enabled 체크).
+        // WEIGHT_LOG 일일제한/실패와 독립 — 이미 SUCCESS면 내부 skip.
+        claimSignupBonus(userId, user);
+
         // 일일 제한 체크
         checkDailyLimit(userId, RewardType.WEIGHT_LOG);
 
@@ -195,6 +199,77 @@ public class RewardServiceImpl implements RewardService {
         }
     }
 
+    /**
+     * S6-14 가입 축하 보너스 지급 (1회성).
+     * - RewardConfig.SIGNUP_BONUS 활성화 필요
+     * - 동일 유저에 SUCCESS 이력 있으면 skip
+     * - 예외는 swallow + warn log로 호출자 경로 영향 억제 (단, 동일 트랜잭션 flush/commit 시점 예외는 격리 불가 — spec §10 리스크 참조)
+     */
+    void claimSignupBonus(Long userId, UserB user) {
+        try {
+            List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(RewardType.SIGNUP_BONUS);
+            if (configs.isEmpty()) {
+                log.info("가입 축하 보너스 설정 없음 또는 비활성화 (userId={})", userId);
+                return;
+            }
+            boolean already = rewardHistoryRepository
+                    .existsByUserIdAndRewardTypeAndStatusAndDelYn(
+                            userId, RewardType.SIGNUP_BONUS, RewardStatus.SUCCESS, 'N');
+            if (already) {
+                log.info("가입 축하 보너스 이미 지급됨 (userId={})", userId);
+                return;
+            }
+
+            int amount = determineAmount(RewardType.SIGNUP_BONUS);
+
+            addPointsToUser(user, amount, PieceTransactionType.REWARD_SIGNUP_BONUS, null);
+
+            RewardHistory history = new RewardHistory(
+                    userId, RewardType.SIGNUP_BONUS, amount, RewardStatus.SUCCESS, null);
+            rewardHistoryRepository.save(history);
+
+            log.info("가입 축하 보너스 지급: userId={}, amount={}g", userId, amount);
+        } catch (Exception e) {
+            log.warn("가입 축하 보너스 지급 실패 (userId={}): {}", userId, e.getMessage());
+        }
+    }
+
+    /**
+     * S6-15 프로필 완성 보너스 지급 (최초 height 입력 시 1회성).
+     * - RewardConfig.PROFILE_BONUS 활성화 필요
+     * - 동일 유저에 SUCCESS 이력 있으면 skip
+     * - 예외는 swallow + warn log로 호출자 경로(height 저장) 영향 억제
+     */
+    @Override
+    public void claimProfileBonus(Long userId, UserB user) {
+        try {
+            List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(RewardType.PROFILE_BONUS);
+            if (configs.isEmpty()) {
+                log.info("프로필 보너스 설정 없음 또는 비활성화 (userId={})", userId);
+                return;
+            }
+            boolean already = rewardHistoryRepository
+                    .existsByUserIdAndRewardTypeAndStatusAndDelYn(
+                            userId, RewardType.PROFILE_BONUS, RewardStatus.SUCCESS, 'N');
+            if (already) {
+                log.info("프로필 보너스 이미 지급됨 (userId={})", userId);
+                return;
+            }
+
+            int amount = determineAmount(RewardType.PROFILE_BONUS);
+
+            addPointsToUser(user, amount, PieceTransactionType.REWARD_PROFILE_BONUS, null);
+
+            RewardHistory history = new RewardHistory(
+                    userId, RewardType.PROFILE_BONUS, amount, RewardStatus.SUCCESS, null);
+            rewardHistoryRepository.save(history);
+
+            log.info("프로필 보너스 지급: userId={}, amount={}g", userId, amount);
+        } catch (Exception e) {
+            log.warn("프로필 보너스 지급 실패 (userId={}): {}", userId, e.getMessage());
+        }
+    }
+
     // === private helpers ===
 
     private UserB findUser(String socialId) {
@@ -289,6 +364,8 @@ public class RewardServiceImpl implements RewardService {
             case MISSION_WEIGHT_WEEKLY -> "이번주 체중기록 미션";
             case REVIEW_AD_BONUS -> "리뷰 광고 보너스";
             case EXCHANGE -> "토스포인트로 바꾸기";
+            case SIGNUP_BONUS -> "가입 축하";
+            case PROFILE_BONUS -> "프로필 완성";
         };
     }
 }
