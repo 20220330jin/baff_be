@@ -16,5 +16,7 @@ public enum AdWatchLocation {
     ATTENDANCE_PRE_AD,           // 출석 전 전면광고
     REVIEW_AD_BONUS,             // 리뷰 광고 보너스
     ATTENDANCE_RESULT,           // S5-19: 출석 완료 결과 페이지 (이미지배너)
-    WEIGHT_RESULT                // S5-18: 체중기록 완료 결과 페이지 (이미지배너)
+    WEIGHT_RESULT,               // S5-18: 체중기록 완료 결과 페이지 (이미지배너)
+    EXCHANGE_RESULT,             // S6-4: 환전 완료 결과 페이지 (이미지배너)
+    MISSION_RESULT               // S6-4/S6-8: 미션 완료 결과 페이지 (이미지배너, 미션 시스템 착수 시)
 }
