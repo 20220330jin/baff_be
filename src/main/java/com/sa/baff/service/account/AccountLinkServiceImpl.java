@@ -139,9 +139,15 @@ public class AccountLinkServiceImpl implements AccountLinkService {
                     primary.getId(), PROVIDER_TOSS, AccountLinkStatus.ACTIVE);
             return hasActive ? "ALREADY_LINKED" : "LIFETIME_LIMIT_EXCEEDED";
         }
-        if (accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
-                PROVIDER_TOSS, secondary.getSocialId(), AccountLinkStatus.ACTIVE)) {
-            return "TOSS_ALREADY_LINKED";
+        // S3-15 P1-2 CP2 Round 2: Toss identity(providerUserId) 기준 평생 1회 차단.
+        // 탈퇴 → 재가입으로 새 userId 할당되어 위 "primary.id 기준" 판정을 우회해도,
+        // 동일 Toss identity가 과거 연결된 이력이 있으면 재연결 불가.
+        //   ACTIVE 존재 → TOSS_ALREADY_LINKED (다른 Primary에 연결 중)
+        //   ACTIVE 없지만 REVOKED 이력 존재 → LIFETIME_LIMIT_EXCEEDED (탈퇴 후 재연결 시도)
+        if (accountLinkRepository.existsByProviderAndProviderUserId(PROVIDER_TOSS, secondary.getSocialId())) {
+            boolean hasActive = accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
+                    PROVIDER_TOSS, secondary.getSocialId(), AccountLinkStatus.ACTIVE);
+            return hasActive ? "TOSS_ALREADY_LINKED" : "LIFETIME_LIMIT_EXCEEDED";
         }
         if (battleParticipantRepository.existsActiveByUserId(primary.getId(), ACTIVE_BATTLE_STATUSES)
                 || battleParticipantRepository.existsActiveByUserId(secondary.getId(), ACTIVE_BATTLE_STATUSES)

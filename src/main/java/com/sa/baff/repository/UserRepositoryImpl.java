@@ -7,6 +7,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.sa.baff.domain.EditNicknameStatus;
 import com.sa.baff.domain.QUserB;
 import com.sa.baff.domain.UserB;
+import com.sa.baff.domain.type.UserStatus;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.model.vo.UserVO;
@@ -60,6 +61,8 @@ public class UserRepositoryImpl extends QuerydslRepositorySupport implements Use
         String withdrawalPrefix = "withdrawalUser_";
 
         jpaQueryFactory.update(user)
+                // S3-15 P1-3: status=WITHDRAWN 동시 세팅 (spec §3.4 전이표, §6.4 탈퇴 정책)
+                .set(user.status, UserStatus.WITHDRAWN)
                 .set(user.socialId, user.socialId.prepend(withdrawalPrefix).concat("_").concat(uuid))
                 .set(user.email, user.email.prepend(withdrawalPrefix).concat(uuid))
                 .set(user.delYn, 'Y')

@@ -1,7 +1,11 @@
 package com.sa.baff.service;
 
+import com.sa.baff.domain.AccountLink;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.domain.UserFlag;
+import com.sa.baff.domain.type.AccountLinkStatus;
+
+import java.util.Optional;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.model.vo.TossVO;
@@ -35,6 +39,8 @@ public class UserServiceImpl implements UserService {
     private final NicknameGeneratorService nicknameGeneratorService;
     private final JwtProvider jwtProvider;
     private final TossAuthService tossAuthService;
+    // S3-15 P1-3: 탈퇴 시 AccountLink revoke + Secondary 연쇄 탈퇴 (spec §3.4, §6.4)
+    private final AccountLinkRepository accountLinkRepository;
 
     @Override
     public UserDto getUserInfo(String userId) {
@@ -125,7 +131,27 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void withdrawal(String socialId) {
         UserB user = userRepository.findBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
-        userRepository.withdrawal(user.getId());
+        cascadeWithdrawal(user.getId());
+    }
+
+    /**
+     * S3-15 P1-3 — Primary 탈퇴 시 관련 리소스 동시 정리 (spec §3.4, §6.4).
+     *  1) Primary 본인 status=WITHDRAWN + delYn='Y'
+     *  2) Primary 소유 활성 AccountLink revoke
+     *  3) 병합된 Secondary(MERGED) 조회 → 연쇄 WITHDRAWN + Secondary 소유 AccountLink 방어 revoke
+     *
+     * CP2 Round 2 Finding 3: happy path는 Primary 1건이지만 데이터 오염/운영 복구 이력을 방어.
+     */
+    private void cascadeWithdrawal(Long primaryUserId) {
+        userRepository.withdrawal(primaryUserId);
+        accountLinkRepository.findByUserIdAndStatus(primaryUserId, AccountLinkStatus.ACTIVE)
+                .ifPresent(AccountLink::revoke);
+        userRepository.findByPrimaryUserId(primaryUserId)
+                .ifPresent(secondary -> {
+                    userRepository.withdrawal(secondary.getId());
+                    accountLinkRepository.findByUserIdAndStatus(secondary.getId(), AccountLinkStatus.ACTIVE)
+                            .ifPresent(AccountLink::revoke);
+                });
     }
 
     @Override
@@ -191,12 +217,26 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void unlinkTossAccount(String userKey) {
         log.info("Toss unlink-callback 수신 - userKey: {}", userKey);
         String storedSocialId = com.sa.baff.util.TossSocialIdMapper.toStoredSocialId(userKey);
+
+        // S3-15 P1-3 CP2 Round 2 Finding 1: 병합 후 AccountLink는 userId=primary, providerUserId=secondary.socialId 구조.
+        // unlink 콜백이 Secondary socialId로 들어오면 raw findBySocialId는 Secondary row만 반환 → Primary가 안 잡힘.
+        // 먼저 AccountLink로 Primary userId를 찾고, 없을 때만 standalone Toss 유저 fallback.
+        Optional<AccountLink> activeLink = accountLinkRepository
+                .findByProviderAndProviderUserIdAndStatus(
+                        "toss", storedSocialId, AccountLinkStatus.ACTIVE);
+        if (activeLink.isPresent()) {
+            Long primaryUserId = activeLink.get().getUserId();
+            cascadeWithdrawal(primaryUserId);
+            log.info("Toss 연결 해제 처리 완료 (병합 계정 Primary 경유) - userKey: {}, primaryUserId: {}", userKey, primaryUserId);
+            return;
+        }
         userRepository.findBySocialId(storedSocialId).ifPresent(user -> {
-            userRepository.withdrawal(user.getId());
-            log.info("Toss 연결 해제 처리 완료 - userKey: {}, userId: {}", userKey, user.getId());
+            cascadeWithdrawal(user.getId());
+            log.info("Toss 연결 해제 처리 완료 (standalone) - userKey: {}, userId: {}", userKey, user.getId());
         });
     }
 

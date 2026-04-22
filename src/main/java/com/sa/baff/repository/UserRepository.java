@@ -31,6 +31,12 @@ public interface UserRepository extends CrudRepository<UserB, Long>, UserReposit
     List<UserB> findByNicknameContainingAndDelYn(String nickname, Character delYn);
 
     /**
+     * 계정 통합 Primary 탈퇴 시 연쇄 탈퇴 대상 Secondary 조회.
+     * S3-15 P1-3: 병합된 Secondary(MERGED)는 primary_user_id로 역참조 가능.
+     */
+    Optional<UserB> findByPrimaryUserId(Long primaryUserId);
+
+    /**
      * 계정 통합 confirmLink 트랜잭션 전용 비관적 락.
      * S3-15 P1-2: primary/secondary 동시 수정 경합(배틀 참가/초대 생성) 방지.
      * 호출자는 반드시 ID 정렬 순서대로 획득해서 deadlock을 방지해야 한다.

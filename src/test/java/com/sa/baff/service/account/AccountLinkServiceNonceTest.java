@@ -169,7 +169,9 @@ class AccountLinkServiceNonceTest {
 
         // detectBlockReason false chain
         when(accountLinkRepository.existsByUserIdAndProvider(anyLong(), anyString())).thenReturn(false);
-        when(accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
+        // S3-15 P1-2 CP2 Round 2: Toss identity 기준 평생 1회 차단 체크 (B 옵션)
+        when(accountLinkRepository.existsByProviderAndProviderUserId(anyString(), anyString())).thenReturn(false);
+        lenient().when(accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
                 anyString(), anyString(), eq(AccountLinkStatus.ACTIVE))).thenReturn(false);
         lenient().when(battleParticipantRepository.existsActiveByUserId(anyLong(), org.mockito.ArgumentMatchers.anyList())).thenReturn(false);
         lenient().when(battleInviteRepository.existsPendingByUserId(anyLong(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyList())).thenReturn(false);
