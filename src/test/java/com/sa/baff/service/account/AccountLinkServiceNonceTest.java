@@ -110,8 +110,7 @@ class AccountLinkServiceNonceTest {
                 new AccountLinkDto.PrepareRequest(TOKEN_VALUE, AUTH_CODE, REFERRER));
         String nonce = prepareResponse.nonce();
 
-        when(linkTokenRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(linkTokenRepository.findByToken(TOKEN_VALUE)).thenReturn(Optional.of(linkToken));
+        when(linkTokenRepository.findByTokenForUpdate(TOKEN_VALUE)).thenReturn(Optional.of(linkToken));
 
         TransactionSynchronizationManager.initSynchronization();
         try {
@@ -133,8 +132,7 @@ class AccountLinkServiceNonceTest {
         accountLinkService.prepareLink(
                 new AccountLinkDto.PrepareRequest(TOKEN_VALUE, AUTH_CODE, REFERRER));
 
-        when(linkTokenRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(linkTokenRepository.findByToken(TOKEN_VALUE)).thenReturn(Optional.of(linkToken));
+        when(linkTokenRepository.findByTokenForUpdate(TOKEN_VALUE)).thenReturn(Optional.of(linkToken));
 
         assertThatThrownBy(() -> accountLinkService.confirmLink(
                 new AccountLinkDto.ConfirmRequest(TOKEN_VALUE, "idem-x", "fake-nonce")))
@@ -149,8 +147,7 @@ class AccountLinkServiceNonceTest {
         accountLinkService.prepareLink(
                 new AccountLinkDto.PrepareRequest(TOKEN_VALUE, AUTH_CODE, REFERRER));
 
-        when(linkTokenRepository.findByIdempotencyKey(anyString())).thenReturn(Optional.empty());
-        when(linkTokenRepository.findByToken(TOKEN_VALUE)).thenReturn(Optional.of(linkToken));
+        when(linkTokenRepository.findByTokenForUpdate(TOKEN_VALUE)).thenReturn(Optional.of(linkToken));
 
         assertThatThrownBy(() -> accountLinkService.confirmLink(
                 new AccountLinkDto.ConfirmRequest(TOKEN_VALUE, "idem-y", null)))
@@ -166,12 +163,16 @@ class AccountLinkServiceNonceTest {
                 .thenReturn(new TossAuthService.TossUserKeyResult(TOSS_SOCIAL_ID, 99999L, "e", "n"));
         when(userRepository.findBySocialId(TOSS_SOCIAL_ID)).thenReturn(Optional.of(secondary));
 
+        // S3-15 P1-2: confirmLink는 비관적 락으로 조회 (ID 정렬 순서 1L → 2L)
+        lenient().when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(primary));
+        lenient().when(userRepository.findByIdForUpdate(2L)).thenReturn(Optional.of(secondary));
+
         // detectBlockReason false chain
         when(accountLinkRepository.existsByUserIdAndProvider(anyLong(), anyString())).thenReturn(false);
         when(accountLinkRepository.existsByProviderAndProviderUserIdAndStatus(
                 anyString(), anyString(), eq(AccountLinkStatus.ACTIVE))).thenReturn(false);
         lenient().when(battleParticipantRepository.existsActiveByUserId(anyLong(), org.mockito.ArgumentMatchers.anyList())).thenReturn(false);
-        lenient().when(battleInviteRepository.existsPendingByUserId(anyLong(), org.mockito.ArgumentMatchers.any())).thenReturn(false);
+        lenient().when(battleInviteRepository.existsPendingByUserId(anyLong(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyList())).thenReturn(false);
 
         // Diff 계산 stubs
         lenient().when(pieceRepository.findByUser(primary)).thenReturn(Optional.empty());
