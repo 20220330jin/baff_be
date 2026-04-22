@@ -53,6 +53,8 @@ public class WebSecurityConfig {
                    */
                   .authorizeHttpRequests(authorize -> authorize
                           .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                          // 정식 오픈 전까지 ADMIN 전용 (2026-04-22 긴급 제한, S3 Phase 3)
+                          .requestMatchers("/api/account/link/issue-token", "/api/account/link/dismiss-banner").hasRole("ADMIN")
                           .anyRequest().permitAll()
                   )
                   /**
