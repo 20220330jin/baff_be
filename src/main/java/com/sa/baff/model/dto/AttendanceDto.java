@@ -14,7 +14,6 @@ public class AttendanceDto {
     @AllArgsConstructor
     public static class checkResponse {
         private Integer earnedGrams;
-        private Integer preAdBonusGrams;
         private Integer streakCount;
         private Boolean streakBonusEarned;
         private Integer streakBonusGrams;
@@ -28,6 +27,7 @@ public class AttendanceDto {
     public static class statusResponse {
         private Boolean attendedToday;
         private Integer currentStreak;
+        private Boolean canSaveStreak;
         private List<LocalDate> monthAttendance;
         private List<streakBonusInfo> nextBonuses;
     }
@@ -41,5 +41,34 @@ public class AttendanceDto {
         private Integer requiredDays;
         private Integer bonusGrams;
         private Boolean achieved;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class adBonusRequest {
+        private String platform;
+        private String adFormat;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class adBonusResponse {
+        private Integer earnedGrams;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class streakSaveResponse {
+        private Integer streakCount;
+        private Integer earnedGrams;
     }
 }

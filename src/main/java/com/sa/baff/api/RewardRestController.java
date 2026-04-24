@@ -1,8 +1,11 @@
 package com.sa.baff.api;
 
+import com.sa.baff.model.dto.AttendanceDto;
 import com.sa.baff.model.dto.RewardDto;
+import com.sa.baff.service.AttendanceService;
 import com.sa.baff.service.ExchangeService;
 import com.sa.baff.service.RewardService;
+import com.sa.baff.common.GramConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +17,7 @@ public class RewardRestController {
 
     private final RewardService rewardService;
     private final ExchangeService exchangeService;
+    private final AttendanceService attendanceService;
 
     /** 체중 기록 리워드 지급 */
     @PostMapping("/weight")
@@ -31,11 +35,21 @@ public class RewardRestController {
         return rewardService.grantWeightAdBonus(socialId, weightId);
     }
 
-    /** 출석 광고 보너스 리워드 지급 */
+    /**
+     * @deprecated S7-14: 구 경로 alias. 신규 경로 {@code POST /api/reward/attendance/ad-bonus} 사용 권장.
+     * 다음 스프린트(S7-14-후속-A)에서 제거 예정. 구 FE 캐시/지연 배포 호환 목적.
+     * body 없이 호출되므로 AdWatchEvent에는 tossAdResponse="LEGACY"로 기록된다.
+     */
+    @Deprecated
     @PostMapping("/attendance-ad-bonus")
-    public RewardDto.rewardResponse grantAttendanceAdBonus(
+    public RewardDto.rewardResponse grantAttendanceAdBonusLegacy(
             @AuthenticationPrincipal String socialId) {
-        return rewardService.grantAttendanceAdBonus(socialId);
+        AttendanceDto.adBonusResponse response =
+                attendanceService.grantAdBonus(socialId, null, "LEGACY");
+        return RewardDto.rewardResponse.builder()
+                .earnedGrams(response.getEarnedGrams())
+                .message(GramConstants.earnMessage(response.getEarnedGrams()))
+                .build();
     }
 
     /** 리뷰 작성 리워드 지급 */
