@@ -2,6 +2,7 @@ package com.sa.baff.service;
 
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.RewardDto;
+import com.sa.baff.util.RewardType;
 
 public interface RewardService {
 
@@ -26,6 +27,17 @@ public interface RewardService {
     /** 광고 이벤트 기록 */
     void recordAdEvent(String socialId, String watchLocation, Long referenceId, String tossAdResponse);
 
-    /** S6-15 프로필 완성 보너스 지급 (최초 height 입력 시 1회, dedup 내부 처리) */
-    void claimProfileBonus(Long userId, UserB user);
+    /**
+     * 프로필 완성 보너스 지급 (필드별 최초 1회, dedup 내부 처리).
+     * S6-15(height) / S6-30(gender, birthdate) 공용.
+     * @param rewardType PROFILE_BONUS | PROFILE_BONUS_GENDER | PROFILE_BONUS_BIRTHDATE
+     */
+    void claimProfileBonus(Long userId, UserB user, RewardType rewardType);
+
+    /**
+     * S6-28 주간 마일스톤 체크 & 지급.
+     * 이번주 체중기록 SUCCESS 카운트가 3/5/7회 도달 시 각각 1회 자동 지급. dedup은 UserRewardWeekly 플래그.
+     * grantWeightReward 등 WEIGHT_LOG 지급 직후 호출 — 예외는 내부 swallow.
+     */
+    void claimWeeklyMilestones(Long userId, UserB user);
 }

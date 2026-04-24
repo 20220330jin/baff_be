@@ -155,7 +155,12 @@ public class PieceServiceImpl implements PieceService {
             case REWARD_AD_BONUS -> "광고 보너스";
             case REWARD_MISSION -> "미션 완료 리워드";
             case REWARD_SIGNUP_BONUS -> "가입 축하 리워드";
-            case REWARD_PROFILE_BONUS -> "프로필 완성 리워드";
+            case REWARD_PROFILE_BONUS -> "프로필 완성 리워드 (키)";
+            case REWARD_PROFILE_BONUS_GENDER -> "프로필 완성 리워드 (성별)";
+            case REWARD_PROFILE_BONUS_BIRTHDATE -> "프로필 완성 리워드 (생년월일)";
+            case REWARD_WEEKLY_MILESTONE_3 -> "주간 마일스톤 리워드 (3회)";
+            case REWARD_WEEKLY_MILESTONE_5 -> "주간 마일스톤 리워드 (5회)";
+            case REWARD_WEEKLY_MILESTONE_7 -> "주간 마일스톤 리워드 (7회)";
             case EXCHANGE_REQUEST -> "환전 요청";
             case EXCHANGE_SUCCESS -> "환전 완료";
             case EXCHANGE_FAILED_REFUND -> "환전 실패 환불";

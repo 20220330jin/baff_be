@@ -1,6 +1,7 @@
 package com.sa.baff.service;
 
 import com.sa.baff.domain.UserB;
+import com.sa.baff.domain.type.Gender;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.model.vo.TossVO;
@@ -9,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -34,6 +36,12 @@ public interface UserService {
     ResponseEntity<?> userLogout(HttpServletRequest request, HttpServletResponse response);
 
     void insertHeight(String socialId, Double height);
+
+    /** S6-30: 성별 입력 (최초 1회 PROFILE_BONUS_GENDER 1g 지급). */
+    void insertGender(String socialId, Gender gender);
+
+    /** S6-30: 생년월일 입력 (최초 1회 PROFILE_BONUS_BIRTHDATE 1g 지급). */
+    void insertBirthdate(String socialId, LocalDate birthdate);
 
     UserB findOrCreateSocialUser(String socialId, String email, String name, String profileUrl, String provider);
 

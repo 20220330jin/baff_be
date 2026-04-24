@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -29,6 +31,7 @@ public class RewardServiceImpl implements RewardService {
     private final RewardConfigRepository rewardConfigRepository;
     private final RewardHistoryRepository rewardHistoryRepository;
     private final UserRewardDailyRepository userRewardDailyRepository;
+    private final UserRewardWeeklyRepository userRewardWeeklyRepository;
     private final AdWatchEventRepository adWatchEventRepository;
 
     private final Random random = new Random();
@@ -58,6 +61,9 @@ public class RewardServiceImpl implements RewardService {
 
         // 일일 집계 업데이트
         incrementDaily(userId, RewardType.WEIGHT_LOG, earnedGrams);
+
+        // S6-28 주간 마일스톤 체크 (3/5/7회 달성 시 자동 보너스) — 예외는 내부 swallow
+        claimWeeklyMilestones(userId, user);
 
         log.info("체중 기록 리워드: userId={}, weightId={}, earned={}g", userId, weightId, earnedGrams);
 
@@ -235,39 +241,114 @@ public class RewardServiceImpl implements RewardService {
     }
 
     /**
-     * S6-15 프로필 완성 보너스 지급 (최초 height 입력 시 1회성).
-     * - RewardConfig.PROFILE_BONUS 활성화 필요
-     * - 동일 유저에 SUCCESS 이력 있으면 skip
-     * - 예외는 swallow + warn log로 호출자 경로(height 저장) 영향 억제
+     * 프로필 완성 보너스 지급 (필드별 최초 1회성).
+     * S6-15: PROFILE_BONUS (height) / S6-30: PROFILE_BONUS_GENDER, PROFILE_BONUS_BIRTHDATE.
+     * - RewardConfig 해당 타입 활성화 필요
+     * - 동일 유저 + 동일 RewardType에 SUCCESS 이력 있으면 skip
+     * - 예외는 swallow + warn log로 호출자 경로(필드 저장) 영향 억제
      */
     @Override
-    public void claimProfileBonus(Long userId, UserB user) {
+    public void claimProfileBonus(Long userId, UserB user, RewardType rewardType) {
         try {
-            List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(RewardType.PROFILE_BONUS);
+            List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(rewardType);
             if (configs.isEmpty()) {
-                log.info("프로필 보너스 설정 없음 또는 비활성화 (userId={})", userId);
+                log.info("프로필 보너스 설정 없음 또는 비활성화 (userId={}, type={})", userId, rewardType);
                 return;
             }
             boolean already = rewardHistoryRepository
                     .existsByUserIdAndRewardTypeAndStatusAndDelYn(
-                            userId, RewardType.PROFILE_BONUS, RewardStatus.SUCCESS, 'N');
+                            userId, rewardType, RewardStatus.SUCCESS, 'N');
             if (already) {
-                log.info("프로필 보너스 이미 지급됨 (userId={})", userId);
+                log.info("프로필 보너스 이미 지급됨 (userId={}, type={})", userId, rewardType);
                 return;
             }
 
-            int amount = determineAmount(RewardType.PROFILE_BONUS);
+            int amount = determineAmount(rewardType);
 
-            addPointsToUser(user, amount, PieceTransactionType.REWARD_PROFILE_BONUS, null);
+            addPointsToUser(user, amount, resolveProfileBonusTxType(rewardType), null);
 
             RewardHistory history = new RewardHistory(
-                    userId, RewardType.PROFILE_BONUS, amount, RewardStatus.SUCCESS, null);
+                    userId, rewardType, amount, RewardStatus.SUCCESS, null);
             rewardHistoryRepository.save(history);
 
-            log.info("프로필 보너스 지급: userId={}, amount={}g", userId, amount);
+            log.info("프로필 보너스 지급: userId={}, type={}, amount={}g", userId, rewardType, amount);
         } catch (Exception e) {
-            log.warn("프로필 보너스 지급 실패 (userId={}): {}", userId, e.getMessage());
+            log.warn("프로필 보너스 지급 실패 (userId={}, type={}): {}", userId, rewardType, e.getMessage());
         }
+    }
+
+    private PieceTransactionType resolveProfileBonusTxType(RewardType rewardType) {
+        return switch (rewardType) {
+            case PROFILE_BONUS -> PieceTransactionType.REWARD_PROFILE_BONUS;
+            case PROFILE_BONUS_GENDER -> PieceTransactionType.REWARD_PROFILE_BONUS_GENDER;
+            case PROFILE_BONUS_BIRTHDATE -> PieceTransactionType.REWARD_PROFILE_BONUS_BIRTHDATE;
+            default -> throw new IllegalArgumentException("Not a profile bonus type: " + rewardType);
+        };
+    }
+
+    /**
+     * S6-28 주간 마일스톤 체크 & 지급 (체중기록 3/5/7회).
+     * - 이번주 WEIGHT_LOG SUCCESS 카운트 조회 → 3/5/7 도달 시 해당 플래그 미수령이면 지급
+     * - dedup: UserRewardWeekly.milestone_N_claimed (user_id + week_start_date unique)
+     * - 예외는 swallow + warn log로 호출자 경로(grantWeightReward) 영향 억제
+     * - gap_analysis §5-C L1+L2
+     */
+    @Override
+    public void claimWeeklyMilestones(Long userId, UserB user) {
+        try {
+            LocalDate weekStart = LocalDate.now().with(DayOfWeek.MONDAY);
+            LocalDateTime startOfWeek = weekStart.atStartOfDay();
+            LocalDateTime endOfWeek = weekStart.plusDays(7).atStartOfDay();
+
+            long weightLogCount = rewardHistoryRepository
+                    .countByUserIdAndRewardTypeAndStatusAndDelYnAndRegDateTimeBetween(
+                            userId, RewardType.WEIGHT_LOG, RewardStatus.SUCCESS, 'N',
+                            startOfWeek, endOfWeek);
+
+            // 아직 3회 미달이면 early return (DB 접근 최소화)
+            if (weightLogCount < 3) return;
+
+            UserRewardWeekly weekly = userRewardWeeklyRepository
+                    .findByUserIdAndWeekStartDate(userId, weekStart)
+                    .orElseGet(() -> userRewardWeeklyRepository.save(new UserRewardWeekly(userId, weekStart)));
+
+            boolean changed = false;
+            if (weightLogCount >= 3 && !weekly.getMilestone3Claimed()) {
+                grantMilestone(userId, user, RewardType.WEEKLY_MILESTONE_3,
+                        PieceTransactionType.REWARD_WEEKLY_MILESTONE_3);
+                weekly.setMilestone3Claimed(true);
+                changed = true;
+            }
+            if (weightLogCount >= 5 && !weekly.getMilestone5Claimed()) {
+                grantMilestone(userId, user, RewardType.WEEKLY_MILESTONE_5,
+                        PieceTransactionType.REWARD_WEEKLY_MILESTONE_5);
+                weekly.setMilestone5Claimed(true);
+                changed = true;
+            }
+            if (weightLogCount >= 7 && !weekly.getMilestone7Claimed()) {
+                grantMilestone(userId, user, RewardType.WEEKLY_MILESTONE_7,
+                        PieceTransactionType.REWARD_WEEKLY_MILESTONE_7);
+                weekly.setMilestone7Claimed(true);
+                changed = true;
+            }
+
+            if (changed) userRewardWeeklyRepository.save(weekly);
+        } catch (Exception e) {
+            log.warn("주간 마일스톤 체크/지급 실패 (userId={}): {}", userId, e.getMessage());
+        }
+    }
+
+    private void grantMilestone(Long userId, UserB user, RewardType rewardType, PieceTransactionType txType) {
+        List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(rewardType);
+        if (configs.isEmpty()) {
+            log.info("주간 마일스톤 설정 없음 또는 비활성화 (userId={}, type={})", userId, rewardType);
+            return;
+        }
+        int amount = determineAmount(rewardType);
+        addPointsToUser(user, amount, txType, null);
+        rewardHistoryRepository.save(
+                new RewardHistory(userId, rewardType, amount, RewardStatus.SUCCESS, null));
+        log.info("주간 마일스톤 지급: userId={}, type={}, amount={}g", userId, rewardType, amount);
     }
 
     // === private helpers ===
@@ -365,7 +446,12 @@ public class RewardServiceImpl implements RewardService {
             case REVIEW_AD_BONUS -> "리뷰 광고 보너스";
             case EXCHANGE -> "토스포인트로 바꾸기";
             case SIGNUP_BONUS -> "가입 축하";
-            case PROFILE_BONUS -> "프로필 완성";
+            case PROFILE_BONUS -> "프로필 완성 (키)";
+            case PROFILE_BONUS_GENDER -> "프로필 완성 (성별)";
+            case PROFILE_BONUS_BIRTHDATE -> "프로필 완성 (생년월일)";
+            case WEEKLY_MILESTONE_3 -> "이번주 체중기록 3회 달성";
+            case WEEKLY_MILESTONE_5 -> "이번주 체중기록 5회 달성";
+            case WEEKLY_MILESTONE_7 -> "이번주 체중기록 7회 달성";
         };
     }
 }

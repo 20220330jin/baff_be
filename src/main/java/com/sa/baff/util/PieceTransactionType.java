@@ -15,7 +15,12 @@ public enum PieceTransactionType {
     REWARD_AD_BONUS,         // 광고 보너스 (광고 시청 추가 적립)
     REWARD_MISSION,          // 미션 완료 리워드
     REWARD_SIGNUP_BONUS,     // S6-14 가입 축하 리워드 (1회성)
-    REWARD_PROFILE_BONUS,    // S6-15 프로필 완성 리워드 (최초 height 입력 시 1회성)
+    REWARD_PROFILE_BONUS,              // S6-15 프로필 완성 리워드 - 키 (최초 height 입력 시 1회성)
+    REWARD_PROFILE_BONUS_GENDER,       // S6-30 프로필 완성 리워드 - 성별 (최초 gender 입력 시 1회성)
+    REWARD_PROFILE_BONUS_BIRTHDATE,    // S6-30 프로필 완성 리워드 - 생년월일 (최초 birthdate 입력 시 1회성)
+    REWARD_WEEKLY_MILESTONE_3,         // S6-28 주간 마일스톤 리워드 - 3회
+    REWARD_WEEKLY_MILESTONE_5,         // S6-28 주간 마일스톤 리워드 - 5회
+    REWARD_WEEKLY_MILESTONE_7,         // S6-28 주간 마일스톤 리워드 - 7회
 
     // === 환전 (Phase 1) ===
     EXCHANGE_REQUEST,        // 환전 요청 (차감)

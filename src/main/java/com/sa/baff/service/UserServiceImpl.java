@@ -4,7 +4,10 @@ import com.sa.baff.domain.AccountLink;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.domain.UserFlag;
 import com.sa.baff.domain.type.AccountLinkStatus;
+import com.sa.baff.domain.type.Gender;
+import com.sa.baff.util.RewardType;
 
+import java.time.LocalDate;
 import java.util.Optional;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
@@ -112,7 +115,27 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         // S6-15 프로필 완성 보너스 (최초 1회, dedup/실패는 RewardService 내부에서 swallow)
-        rewardService.claimProfileBonus(user.getId(), user);
+        rewardService.claimProfileBonus(user.getId(), user, RewardType.PROFILE_BONUS);
+    }
+
+    @Override
+    public void insertGender(String socialId, Gender gender) {
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setGender(gender);
+        userRepository.save(user);
+
+        // S6-30 프로필 완성 보너스 - 성별 (최초 1회, dedup/실패는 RewardService 내부에서 swallow)
+        rewardService.claimProfileBonus(user.getId(), user, RewardType.PROFILE_BONUS_GENDER);
+    }
+
+    @Override
+    public void insertBirthdate(String socialId, LocalDate birthdate) {
+        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId).orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setBirthdate(birthdate);
+        userRepository.save(user);
+
+        // S6-30 프로필 완성 보너스 - 생년월일 (최초 1회, dedup/실패는 RewardService 내부에서 swallow)
+        rewardService.claimProfileBonus(user.getId(), user, RewardType.PROFILE_BONUS_BIRTHDATE);
     }
 
     @Override

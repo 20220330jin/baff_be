@@ -1,5 +1,6 @@
 package com.sa.baff.api;
 
+import com.sa.baff.domain.type.Gender;
 import com.sa.baff.model.dto.UserBDto;
 import com.sa.baff.model.dto.UserDto;
 import com.sa.baff.model.vo.UserVO;
@@ -14,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -85,6 +87,24 @@ public class UserRestController {
     @PostMapping("/insertHeight")
     public void insertHeight(@AuthenticationPrincipal String socialId, @RequestBody Double height) {
         userService.insertHeight(socialId, height);
+    }
+
+    /**
+     * S6-30 성별 입력 API.
+     * body: "MALE" | "FEMALE" | "OTHER" (JSON 문자열). 최초 입력 시 1g 지급.
+     */
+    @PostMapping("/insertGender")
+    public void insertGender(@AuthenticationPrincipal String socialId, @RequestBody Gender gender) {
+        userService.insertGender(socialId, gender);
+    }
+
+    /**
+     * S6-30 생년월일 입력 API.
+     * body: "YYYY-MM-DD" (ISO-8601 JSON 문자열). 최초 입력 시 1g 지급.
+     */
+    @PostMapping("/insertBirthdate")
+    public void insertBirthdate(@AuthenticationPrincipal String socialId, @RequestBody LocalDate birthdate) {
+        userService.insertBirthdate(socialId, birthdate);
     }
 
     @PostMapping("/withdrawal")

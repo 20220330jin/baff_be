@@ -1,5 +1,6 @@
 package com.sa.baff.domain;
 
+import com.sa.baff.domain.type.Gender;
 import com.sa.baff.domain.type.UserStatus;
 import com.sa.baff.util.DateTimeUtils;
 import jakarta.persistence.*;
@@ -8,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +42,14 @@ public class UserB extends BaseEntity {
 
     @Column(nullable = true)
     private Double height = 0.0;
+
+    /** S6-30: 성별 (데모그래픽 세그먼트 인사이트용, 최초 입력 시 PROFILE_BONUS_GENDER 1g 지급). */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private Gender gender;
+
+    /** S6-30: 생년월일 (연령대 파생용, 최초 입력 시 PROFILE_BONUS_BIRTHDATE 1g 지급). */
+    private LocalDate birthdate;
 
     private String provider;
 

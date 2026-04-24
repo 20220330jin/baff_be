@@ -3,8 +3,10 @@ package com.sa.baff.model.dto;
 import com.sa.baff.domain.EditNicknameStatus;
 import com.sa.baff.domain.Role;
 import com.sa.baff.domain.UserB;
+import com.sa.baff.domain.type.Gender;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,6 +19,8 @@ public class UserDto {
     private String profileImage;
     private Role role;
     private Double height;
+    private Gender gender;       // S6-30
+    private LocalDate birthdate; // S6-30
     private LocalDateTime regDateTime;
 
     public static UserDto from(UserB user) {
@@ -27,6 +31,8 @@ public class UserDto {
             user.getProfileImageUrl(),
             user.getRole(),
             user.getHeight(),
+            user.getGender(),
+            user.getBirthdate(),
             user.getRegDateTime()
         );
     }

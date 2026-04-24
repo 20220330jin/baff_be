@@ -11,26 +11,25 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * 프로필 완성 보너스 RewardConfig 초기 시딩.
- * S6-15: PROFILE_BONUS (height) / S6-30: PROFILE_BONUS_GENDER, PROFILE_BONUS_BIRTHDATE.
- * 각 타입 row가 없을 때만 amount=1, enabled=true 기본값 생성 (idempotent).
+ * S6-28 주간 마일스톤 RewardConfig 초기 시딩.
+ * 체중기록 3/5/7회 달성 시 각각 3g / 5g / 10g 기본값. 이미 존재하면 skip (idempotent).
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@Order(102)
-public class RewardConfigProfileBonusInitializer implements ApplicationRunner {
+@Order(103)
+public class RewardConfigWeeklyMilestoneInitializer implements ApplicationRunner {
 
     private final RewardConfigRepository rewardConfigRepository;
 
     @Override
     public void run(ApplicationArguments args) {
-        seedIfAbsent(RewardType.PROFILE_BONUS, "최초 height(키) 입력 시 1회 자동 지급");
-        seedIfAbsent(RewardType.PROFILE_BONUS_GENDER, "최초 gender(성별) 입력 시 1회 자동 지급");
-        seedIfAbsent(RewardType.PROFILE_BONUS_BIRTHDATE, "최초 birthdate(생년월일) 입력 시 1회 자동 지급");
+        seedIfAbsent(RewardType.WEEKLY_MILESTONE_3, 3, "이번주 체중기록 3회 달성 시 1회 자동 지급");
+        seedIfAbsent(RewardType.WEEKLY_MILESTONE_5, 5, "이번주 체중기록 5회 달성 시 1회 자동 지급");
+        seedIfAbsent(RewardType.WEEKLY_MILESTONE_7, 10, "이번주 체중기록 7회 달성 시 1회 자동 지급");
     }
 
-    private void seedIfAbsent(RewardType type, String description) {
+    private void seedIfAbsent(RewardType type, int amount, String description) {
         boolean exists = !rewardConfigRepository
                 .findByRewardTypeAndDelYnAndEnabledOrderByAmountAsc(type, 'N', true).isEmpty()
                 || !rewardConfigRepository
@@ -42,7 +41,7 @@ public class RewardConfigProfileBonusInitializer implements ApplicationRunner {
 
         RewardConfig config = new RewardConfig();
         config.setRewardType(type);
-        config.setAmount(1);
+        config.setAmount(amount);
         config.setProbability(100);
         config.setDailyLimit(1);
         config.setIsFixed(true);
@@ -50,6 +49,6 @@ public class RewardConfigProfileBonusInitializer implements ApplicationRunner {
         config.setDescription(description);
         rewardConfigRepository.save(config);
 
-        log.info("[RewardConfig.{}] 초기 시딩 완료 (amount=1, enabled=true)", type);
+        log.info("[RewardConfig.{}] 초기 시딩 완료 (amount={}g, enabled=true)", type, amount);
     }
 }
