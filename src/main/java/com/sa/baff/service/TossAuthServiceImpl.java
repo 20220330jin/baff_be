@@ -40,12 +40,18 @@ public class TossAuthServiceImpl implements TossAuthService {
             throw new IllegalStateException("Toss 연동이 설정되지 않았습니다.");
         }
 
+        long t0 = System.currentTimeMillis();
         TokenResponse tokenResponse = getAccessToken(authorizationCode, referrer);
+        long t1 = System.currentTimeMillis();
         UserInfo encryptedUserInfo = getUserInfoFromToss(tokenResponse.getSuccess().getAccessToken());
+        long t2 = System.currentTimeMillis();
 
         String decryptedName = decryptField(encryptedUserInfo.getName());
         String decryptedEmail = decryptField(encryptedUserInfo.getEmail());
+        long t3 = System.currentTimeMillis();
 
+        log.info("[TIMING] resolveTossUserKey getToken={}ms getUserInfo={}ms decrypt={}ms total={}ms",
+                t1 - t0, t2 - t1, t3 - t2, t3 - t0);
         log.info("Toss auth resolve - userKey: {}, name: {}", encryptedUserInfo.getUserKey(), decryptedName);
 
         String tossUserKey = TossSocialIdMapper.toStoredSocialId(encryptedUserInfo.getUserKey());
