@@ -29,30 +29,34 @@ public class RewardConfigFirstAttendanceBonusInitializer implements ApplicationR
 
     @Override
     public void run(ApplicationArguments args) {
-        boolean exists = !rewardConfigRepository
-                .findByRewardTypeAndDelYnAndEnabledOrderByAmountAsc(
-                        RewardType.FIRST_ATTENDANCE_BONUS, 'N', true).isEmpty()
-                || !rewardConfigRepository
-                .findByRewardTypeAndDelYnAndEnabledOrderByAmountAsc(
-                        RewardType.FIRST_ATTENDANCE_BONUS, 'N', false).isEmpty();
-        if (exists) {
-            log.info("[RewardConfig.FIRST_ATTENDANCE_BONUS] 기존 설정 존재 — 시딩 생략");
-            return;
+        try {
+            boolean exists = !rewardConfigRepository
+                    .findByRewardTypeAndDelYnAndEnabledOrderByAmountAsc(
+                            RewardType.FIRST_ATTENDANCE_BONUS, 'N', true).isEmpty()
+                    || !rewardConfigRepository
+                    .findByRewardTypeAndDelYnAndEnabledOrderByAmountAsc(
+                            RewardType.FIRST_ATTENDANCE_BONUS, 'N', false).isEmpty();
+            if (exists) {
+                log.info("[RewardConfig.FIRST_ATTENDANCE_BONUS] 기존 설정 존재 — 시딩 생략");
+                return;
+            }
+
+            RewardConfig config = new RewardConfig();
+            config.setRewardType(RewardType.FIRST_ATTENDANCE_BONUS);
+            config.setAmount(GramConstants.FIRST_ATTENDANCE_TOSS_POINT_AMOUNT);
+            config.setProbability(100);
+            config.setDailyLimit(1);
+            config.setIsFixed(true);
+            config.setEnabled(false);
+            config.setPromotionCode(null);
+            config.setDescription("첫 출석 시 토스포인트 " + GramConstants.FIRST_ATTENDANCE_TOSS_POINT_AMOUNT
+                    + "원 직접 지급. 어드민에서 promotionCode 입력 + enabled=true 토글 시 활성화.");
+            rewardConfigRepository.save(config);
+
+            log.info("[RewardConfig.FIRST_ATTENDANCE_BONUS] 초기 시딩 완료 (amount={}, enabled=false, 활성화 대기)",
+                    GramConstants.FIRST_ATTENDANCE_TOSS_POINT_AMOUNT);
+        } catch (Exception e) {
+            log.warn("[RewardConfig.FIRST_ATTENDANCE_BONUS] 시딩 실패 (부팅은 계속 진행): {}", e.getMessage());
         }
-
-        RewardConfig config = new RewardConfig();
-        config.setRewardType(RewardType.FIRST_ATTENDANCE_BONUS);
-        config.setAmount(GramConstants.FIRST_ATTENDANCE_TOSS_POINT_AMOUNT);
-        config.setProbability(100);
-        config.setDailyLimit(1);
-        config.setIsFixed(true);
-        config.setEnabled(false);
-        config.setPromotionCode(null);
-        config.setDescription("첫 출석 시 토스포인트 " + GramConstants.FIRST_ATTENDANCE_TOSS_POINT_AMOUNT
-                + "원 직접 지급. 어드민에서 promotionCode 입력 + enabled=true 토글 시 활성화.");
-        rewardConfigRepository.save(config);
-
-        log.info("[RewardConfig.FIRST_ATTENDANCE_BONUS] 초기 시딩 완료 (amount={}, enabled=false, 활성화 대기)",
-                GramConstants.FIRST_ATTENDANCE_TOSS_POINT_AMOUNT);
     }
 }
