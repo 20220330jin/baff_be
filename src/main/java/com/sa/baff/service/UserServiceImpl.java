@@ -227,26 +227,44 @@ public class UserServiceImpl implements UserService {
                 tossAuthService.resolveTossUserKey(request.getAuthorizationCode(), request.getReferrer());
 
         String socialId = tossResult.tossUserKey();
+
+        // 1) 활성 row 조회
         UserB user = userRepository.findBySocialId(socialId)
                 .map(existingUser -> {
                     if (existingUser.getDelYn() == 'Y') {
-                        log.info("Reactivating unlinked Toss user: {}", socialId);
+                        log.info("Reactivating unlinked Toss user (raw match): {}", socialId);
                         userRepository.reactivate(existingUser.getId());
                     }
                     return existingUser;
                 })
-                .orElseGet(() -> {
-                    String decryptedEmail = tossResult.email();
-                    String email = (decryptedEmail != null && !decryptedEmail.isBlank())
-                            ? decryptedEmail
-                            : "toss_" + socialId + "@toss.im";
+                // 2) withdrawal로 socialId가 변경된 row 조회 → 동일 토스 userKey 재가입 매칭
+                .orElseGet(() -> userRepository.findWithdrawnByOriginalSocialId(socialId)
+                        .map(withdrawn -> {
+                            String decryptedEmail = tossResult.email();
+                            String restoredEmail = (decryptedEmail != null && !decryptedEmail.isBlank())
+                                    ? decryptedEmail
+                                    : "toss_" + socialId + "@toss.im";
+                            log.info("Restoring withdrawn Toss user (re-login): {} (userId={})",
+                                    socialId, withdrawn.getId());
+                            userRepository.reactivateWithRestore(withdrawn.getId(), socialId, restoredEmail);
+                            // 메모리 entity도 동기화
+                            withdrawn.setSocialId(socialId);
+                            withdrawn.setEmail(restoredEmail);
+                            return withdrawn;
+                        })
+                        // 3) 그래도 없으면 신규 가입
+                        .orElseGet(() -> {
+                            String decryptedEmail = tossResult.email();
+                            String email = (decryptedEmail != null && !decryptedEmail.isBlank())
+                                    ? decryptedEmail
+                                    : "toss_" + socialId + "@toss.im";
 
-                    String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
-                    UserB newUser = new UserB(email, null, randomImageUrl, socialId, "toss", "TOSS");
-                    nicknameGeneratorService.generateUniqueNicknameAndSave(newUser);
-                    log.info("New Toss user created: {}", socialId);
-                    return newUser;
-                });
+                            String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
+                            UserB newUser = new UserB(email, null, randomImageUrl, socialId, "toss", "TOSS");
+                            nicknameGeneratorService.generateUniqueNicknameAndSave(newUser);
+                            log.info("New Toss user created: {}", socialId);
+                            return newUser;
+                        }));
 
         return jwtProvider.create(user.getSocialId(), user.getRole().name());
     }

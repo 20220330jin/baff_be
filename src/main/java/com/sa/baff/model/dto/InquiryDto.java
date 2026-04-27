@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class InquiryDto {
 
@@ -18,6 +20,7 @@ public class InquiryDto {
         private InquiryType inquiryType;
         private InquiryStatus inquiryStatus;
         private LocalDateTime regDateTime;
+        private List<InquiryReplyDto> replies = new ArrayList<>();
 
         public getInquiryList(Long inquiryId, String title, String content, InquiryType inquiryType, InquiryStatus inquiryStatus, LocalDateTime regDateTime) {
             this.inquiryId = inquiryId;
@@ -25,6 +28,24 @@ public class InquiryDto {
             this.content = content;
             this.inquiryType = inquiryType;
             this.inquiryStatus = inquiryStatus;
+            this.regDateTime = regDateTime;
+        }
+    }
+
+    @Setter
+    @Getter
+    public static class InquiryReplyDto {
+        private Long replyId;
+        private Long inquiryId;
+        private String content;
+        private Long adminId;
+        private LocalDateTime regDateTime;
+
+        public InquiryReplyDto(Long replyId, Long inquiryId, String content, Long adminId, LocalDateTime regDateTime) {
+            this.replyId = replyId;
+            this.inquiryId = inquiryId;
+            this.content = content;
+            this.adminId = adminId;
             this.regDateTime = regDateTime;
         }
     }

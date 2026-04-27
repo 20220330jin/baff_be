@@ -84,6 +84,21 @@ public class UserRepositoryImpl extends QuerydslRepositorySupport implements Use
     }
 
     @Override
+    @Transactional
+    public void reactivateWithRestore(Long userId, String originalSocialId, String originalEmail) {
+        QUserB user = QUserB.userB;
+
+        jpaQueryFactory.update(user)
+                .set(user.socialId, originalSocialId)
+                .set(user.email, originalEmail)
+                .set(user.status, UserStatus.ACTIVE)
+                .set(user.delYn, 'N')
+                .set(user.modDateTime, DateTimeUtils.now())
+                .where(user.id.eq(userId))
+                .execute();
+    }
+
+    @Override
     public void editProfileImage(Long userId, UserVO.editProfileImage param) {
         QUserB user = QUserB.userB;
 

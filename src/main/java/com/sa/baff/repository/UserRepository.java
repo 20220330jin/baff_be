@@ -24,6 +24,14 @@ public interface UserRepository extends CrudRepository<UserB, Long>, UserReposit
 
     Optional<UserB> findBySocialId(String socialId);
 
+    /**
+     * withdrawal로 socialId가 'withdrawalUser_{원본}_{uuid}' 패턴으로 변경된 row 조회 (재로그인 매칭용).
+     * 원본 socialId를 prefix 뒤에 보존한 점을 활용 → 동일 토스 userKey로 재접속 시 기존 row 식별.
+     * delYn='Y' + status=WITHDRAWN인 row만 매칭.
+     */
+    @Query("SELECT u FROM UserB u WHERE u.socialId LIKE CONCAT('withdrawalUser_', :originalSocialId, '_%') AND u.delYn = 'Y'")
+    Optional<UserB> findWithdrawnByOriginalSocialId(@Param("originalSocialId") String originalSocialId);
+
     Iterable<UserB> findAllByOrderByRegDateTimeDesc();
 
     long countBynicknameStartingWith(String prefix);
