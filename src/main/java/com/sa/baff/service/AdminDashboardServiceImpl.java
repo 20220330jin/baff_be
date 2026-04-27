@@ -1043,6 +1043,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .rewardedAdRatio(c.getRewardedAdRatio())
                         .rewardedAdGrams(c.getRewardedAdGrams())
                         .interstitialAdGrams(c.getInterstitialAdGrams())
+                        .frequencyLimitEnabled(c.getFrequencyLimitEnabled())
+                        .dailyImpressionLimit(c.getDailyImpressionLimit())
                         .regDateTime(c.getRegDateTime() != null ? c.getRegDateTime().format(DATETIME_FORMATTER) : null)
                         .modDateTime(c.getModDateTime() != null ? c.getModDateTime().format(DATETIME_FORMATTER) : null)
                         .build())
@@ -1074,6 +1076,8 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
         if (request.getRewardedAdRatio() != null) config.setRewardedAdRatio(request.getRewardedAdRatio());
         if (request.getRewardedAdGrams() != null) config.setRewardedAdGrams(request.getRewardedAdGrams());
         if (request.getInterstitialAdGrams() != null) config.setInterstitialAdGrams(request.getInterstitialAdGrams());
+        if (request.getFrequencyLimitEnabled() != null) config.setFrequencyLimitEnabled(request.getFrequencyLimitEnabled());
+        if (request.getDailyImpressionLimit() != null) config.setDailyImpressionLimit(request.getDailyImpressionLimit());
 
         adPositionConfigRepository.save(config);
     }

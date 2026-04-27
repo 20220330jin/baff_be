@@ -370,6 +370,8 @@ public class AdminDashboardDto {
         private Integer rewardedAdRatio;
         private Integer rewardedAdGrams;
         private Integer interstitialAdGrams;
+        private Boolean frequencyLimitEnabled;
+        private Integer dailyImpressionLimit;
         private String regDateTime;
         private String modDateTime;
     }
@@ -392,6 +394,8 @@ public class AdminDashboardDto {
         private Integer rewardedAdRatio;
         private Integer rewardedAdGrams;
         private Integer interstitialAdGrams;
+        private Boolean frequencyLimitEnabled;
+        private Integer dailyImpressionLimit;
     }
 
     /**
