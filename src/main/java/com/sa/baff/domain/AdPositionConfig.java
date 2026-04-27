@@ -76,4 +76,11 @@ public class AdPositionConfig extends BaseEntity {
     /** 전면 광고 시청 시 지급 그램 */
     @Column(nullable = false, columnDefinition = "integer default 1")
     private Integer interstitialAdGrams = 1;
+
+    /** 빈도 제한 활성화 (한도 도달 시 광고 노출 skip → 자체 배너 fallback) */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean frequencyLimitEnabled = false;
+
+    /** 유저당 1일 토스 광고 노출 상한 (null = 무제한) */
+    private Integer dailyImpressionLimit;
 }

@@ -8,7 +8,16 @@ changeup:
     enabled: false
 
 reward:
-  dummy-mode: true
+  dummy-mode: false
+
+# 토스 API (Render 운영용 — application-local.yml은 .gitignore이므로 main yml에 명시)
+toss:
+  api:
+    url: https://apps-in-toss-api.toss.im
+  cert-path: classpath:cert/changeup_public.crt
+  key-path: classpath:cert/changeup_private.key
+  promotion:
+    exchange-code: "01KJ54B2MP0ZC1KSYZ9Y7TWGV9"
 
 # AI 분석 (기본 비활성 -- application-local.yml에서 키 설정)
 ai:

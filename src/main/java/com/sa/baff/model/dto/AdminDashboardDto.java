@@ -265,6 +265,51 @@ public class AdminDashboardDto {
         private String regDateTime;
     }
 
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RewardHistoryItem {
+        private Long id;
+        private Long userId;
+        private String nickname;
+        private String rewardType;
+        private Integer amount;
+        private String status;
+        private String regDateTime;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AttendanceHistoryItem {
+        private Long id;
+        private Long userId;
+        private String nickname;
+        private String attendanceDate;
+        private Integer streakCount;
+        private String regDateTime;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ActivityItem {
+        /** 활동 유형 — TOSS_POINT_GRANT, REWARD, SIGNUP, WEIGHT, GOAL, BATTLE */
+        private String type;
+        private Long userId;
+        private String nickname;
+        /** 사람이 읽을 한 줄 요약 */
+        private String summary;
+        /** 금액(원/그램, 의미는 type별 다름. 0이면 미표시) */
+        private Long amount;
+        /** 참조 ID (해당 도메인 entity id) */
+        private Long refId;
+        private String occurredAt;
+    }
+
     // ===== 광고 시청 관리 =====
 
     @Data

@@ -51,6 +51,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
     private final ExchangeHistoryRepository exchangeHistoryRepository;
     private final AdWatchEventRepository adWatchEventRepository;
     private final AdPositionConfigRepository adPositionConfigRepository;
+    private final UserAttendanceRepository userAttendanceRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -816,6 +817,141 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .build())
                 .collect(Collectors.toList());
         return new PageImpl<>(items, pageable, page.getTotalElements());
+    }
+
+    @Override
+    public Page<AdminDashboardDto.RewardHistoryItem> getRewardHistories(Pageable pageable) {
+        Page<RewardHistory> page = rewardHistoryRepository.findAll(pageable);
+        Set<Long> userIds = page.getContent().stream().map(RewardHistory::getUserId).collect(Collectors.toSet());
+        Map<Long, String> nicks = buildNicknameMap(userIds);
+        List<AdminDashboardDto.RewardHistoryItem> items = page.getContent().stream()
+                .map(r -> AdminDashboardDto.RewardHistoryItem.builder()
+                        .id(r.getId())
+                        .userId(r.getUserId())
+                        .nickname(nicks.getOrDefault(r.getUserId(), "-"))
+                        .rewardType(r.getRewardType() != null ? r.getRewardType().name() : null)
+                        .amount(r.getAmount())
+                        .status(r.getStatus() != null ? r.getStatus().name() : null)
+                        .regDateTime(r.getRegDateTime() != null ? r.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+        return new PageImpl<>(items, pageable, page.getTotalElements());
+    }
+
+    @Override
+    public Page<AdminDashboardDto.AttendanceHistoryItem> getAttendanceHistories(Pageable pageable) {
+        Page<UserAttendance> page = userAttendanceRepository.findAll(pageable);
+        Set<Long> userIds = page.getContent().stream().map(UserAttendance::getUserId).collect(Collectors.toSet());
+        Map<Long, String> nicks = buildNicknameMap(userIds);
+        List<AdminDashboardDto.AttendanceHistoryItem> items = page.getContent().stream()
+                .map(a -> AdminDashboardDto.AttendanceHistoryItem.builder()
+                        .id(a.getId())
+                        .userId(a.getUserId())
+                        .nickname(nicks.getOrDefault(a.getUserId(), "-"))
+                        .attendanceDate(a.getAttendanceDate() != null ? a.getAttendanceDate().toString() : null)
+                        .streakCount(a.getStreakCount())
+                        .regDateTime(a.getRegDateTime() != null ? a.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                        .build())
+                .collect(Collectors.toList());
+        return new PageImpl<>(items, pageable, page.getTotalElements());
+    }
+
+    /**
+     * 통합 활동기록 timeline.
+     * 각 source(가입/체중/리워드/환전/목표/대결)에서 최근 항목 모음 → 시간 역순 정렬 → 페이지 자르기.
+     * 단순 메모리 union 구현 — 데이터량 커지면 별도 activity 테이블 도입 필요.
+     */
+    @Override
+    public Page<AdminDashboardDto.ActivityItem> getActivities(Pageable pageable) {
+        List<AdminDashboardDto.ActivityItem> all = new ArrayList<>();
+
+        // 닉네임 캐시 (한 번에 모든 user 조회)
+        Map<Long, String> allNicks = StreamSupport.stream(userRepository.findAll().spliterator(), false)
+                .collect(Collectors.toMap(UserB::getId, u -> u.getNickname() != null ? u.getNickname() : "-", (a, b) -> a));
+
+        // 1. 회원가입 (UserB.regDateTime)
+        StreamSupport.stream(userRepository.findAll().spliterator(), false)
+                .filter(u -> u.getRegDateTime() != null)
+                .forEach(u -> all.add(AdminDashboardDto.ActivityItem.builder()
+                        .type("SIGNUP")
+                        .userId(u.getId())
+                        .nickname(allNicks.getOrDefault(u.getId(), "-"))
+                        .summary("회원가입")
+                        .amount(0L)
+                        .refId(u.getId())
+                        .occurredAt(u.getRegDateTime().format(DATETIME_FORMATTER))
+                        .build()));
+
+        // 2. 리워드 적립 (RewardHistory)
+        rewardHistoryRepository.findAll().forEach(r -> {
+            String type = r.getRewardType() != null ? r.getRewardType().name() : "REWARD";
+            boolean isTossPoint = "FIRST_ATTENDANCE_BONUS".equals(type) || "EXCHANGE".equals(type);
+            all.add(AdminDashboardDto.ActivityItem.builder()
+                    .type(isTossPoint ? "TOSS_POINT_GRANT" : "REWARD")
+                    .userId(r.getUserId())
+                    .nickname(allNicks.getOrDefault(r.getUserId(), "-"))
+                    .summary(type + " " + (r.getAmount() != null ? r.getAmount() : 0) + (isTossPoint ? "원" : "g"))
+                    .amount((long) (r.getAmount() != null ? r.getAmount() : 0))
+                    .refId(r.getId())
+                    .occurredAt(r.getRegDateTime() != null ? r.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                    .build());
+        });
+
+        // 3. 환전 (ExchangeHistory) — 토스포인트 지급 분류
+        exchangeHistoryRepository.findAll().forEach(e -> all.add(AdminDashboardDto.ActivityItem.builder()
+                .type("TOSS_POINT_GRANT")
+                .userId(e.getUserId())
+                .nickname(allNicks.getOrDefault(e.getUserId(), "-"))
+                .summary("환전 " + e.getTossAmount() + "원 (그램 " + e.getPointAmount() + "g 차감)")
+                .amount((long) e.getTossAmount())
+                .refId(e.getId())
+                .occurredAt(e.getRegDateTime() != null ? e.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                .build()));
+
+        // 4. 체중 기록
+        weightRepository.findAll().forEach(w -> all.add(AdminDashboardDto.ActivityItem.builder()
+                .type("WEIGHT")
+                .userId(w.getUser() != null ? w.getUser().getId() : null)
+                .nickname(w.getUser() != null ? allNicks.getOrDefault(w.getUser().getId(), "-") : "-")
+                .summary("체중 기록 " + w.getWeight() + "kg")
+                .amount(0L)
+                .refId(w.getId())
+                .occurredAt(w.getRegDateTime() != null ? w.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                .build()));
+
+        // 5. 목표 설정
+        goalsRepository.findAll().forEach(g -> all.add(AdminDashboardDto.ActivityItem.builder()
+                .type("GOAL")
+                .userId(g.getUser() != null ? g.getUser().getId() : null)
+                .nickname(g.getUser() != null ? allNicks.getOrDefault(g.getUser().getId(), "-") : "-")
+                .summary("목표 설정")
+                .amount(0L)
+                .refId(g.getId())
+                .occurredAt(g.getRegDateTime() != null ? g.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                .build()));
+
+        // 6. 대결 설정 (BattleRoom 생성)
+        battleRoomRepository.findAll().forEach(b -> all.add(AdminDashboardDto.ActivityItem.builder()
+                .type("BATTLE")
+                .userId(b.getHost() != null ? b.getHost().getId() : null)
+                .nickname(b.getHost() != null ? allNicks.getOrDefault(b.getHost().getId(), "-") : "-")
+                .summary("대결 생성: " + (b.getName() != null ? b.getName() : ""))
+                .amount(0L)
+                .refId(b.getId())
+                .occurredAt(b.getRegDateTime() != null ? b.getRegDateTime().format(DATETIME_FORMATTER) : null)
+                .build()));
+
+        // 시간 역순 정렬 (null은 뒤로)
+        all.sort((a, b) -> {
+            if (a.getOccurredAt() == null) return 1;
+            if (b.getOccurredAt() == null) return -1;
+            return b.getOccurredAt().compareTo(a.getOccurredAt());
+        });
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), all.size());
+        List<AdminDashboardDto.ActivityItem> pageItems = start < all.size() ? all.subList(start, end) : List.of();
+        return new PageImpl<>(pageItems, pageable, all.size());
     }
 
     /** userId → nickname 맵 빌드 (배치) */

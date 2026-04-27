@@ -414,6 +414,29 @@ public class AdminDashboardRestController {
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "recordDate"))));
     }
 
+    @GetMapping("/history/rewards")
+    public ResponseEntity<Page<AdminDashboardDto.RewardHistoryItem>> getRewardHistories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminDashboardService.getRewardHistories(
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "regDateTime"))));
+    }
+
+    @GetMapping("/history/attendances")
+    public ResponseEntity<Page<AdminDashboardDto.AttendanceHistoryItem>> getAttendanceHistories(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminDashboardService.getAttendanceHistories(
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "attendanceDate"))));
+    }
+
+    @GetMapping("/history/activities")
+    public ResponseEntity<Page<AdminDashboardDto.ActivityItem>> getActivities(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        return ResponseEntity.ok(adminDashboardService.getActivities(PageRequest.of(page, size)));
+    }
+
     // ==================== 광고 시청 관리 ====================
 
     @GetMapping("/ad-watch/summary")

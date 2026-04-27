@@ -49,6 +49,10 @@ public interface AdminDashboardService {
     // === 내역 관리 ===
     Page<AdminDashboardDto.LoginHistoryItem> getLoginHistories(Pageable pageable);
     Page<AdminDashboardDto.WeightHistoryItem> getWeightHistories(Pageable pageable);
+    Page<AdminDashboardDto.RewardHistoryItem> getRewardHistories(Pageable pageable);
+    Page<AdminDashboardDto.AttendanceHistoryItem> getAttendanceHistories(Pageable pageable);
+    /** 통합 활동기록 (회원가입/체중기록/리워드/환전/목표/대결 timeline 합본) */
+    Page<AdminDashboardDto.ActivityItem> getActivities(Pageable pageable);
 
     // === 광고 시청 관리 ===
     AdminDashboardDto.AdWatchSummary getAdWatchSummary();
