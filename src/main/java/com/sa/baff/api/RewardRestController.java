@@ -72,6 +72,12 @@ public class RewardRestController {
         return rewardService.getRewardHistory(socialId);
     }
 
+    /** 간헐적 단식 완료 결과 페이지 광고 보너스 (또받기) */
+    @PostMapping("/fasting-ad-bonus")
+    public RewardDto.rewardResponse grantFastingAdBonus(@AuthenticationPrincipal String socialId) {
+        return rewardService.grantFastingAdBonus(socialId);
+    }
+
     /** 그램 → 토스포인트 환전 */
     @PostMapping("/exchange")
     public RewardDto.exchangeResponse exchange(

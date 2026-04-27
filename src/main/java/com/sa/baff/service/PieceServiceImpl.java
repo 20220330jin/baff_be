@@ -161,6 +161,8 @@ public class PieceServiceImpl implements PieceService {
             case REWARD_WEEKLY_MILESTONE_3 -> "주간 마일스톤 리워드 (3회)";
             case REWARD_WEEKLY_MILESTONE_5 -> "주간 마일스톤 리워드 (5회)";
             case REWARD_WEEKLY_MILESTONE_7 -> "주간 마일스톤 리워드 (7회)";
+            case REWARD_FASTING_COMPLETE -> "간헐적 단식 완료 리워드";
+            case REWARD_FASTING_AD_BONUS -> "간헐적 단식 광고 보너스";
             case EXCHANGE_REQUEST -> "환전 요청";
             case EXCHANGE_SUCCESS -> "환전 완료";
             case EXCHANGE_FAILED_REFUND -> "환전 실패 환불";

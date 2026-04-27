@@ -154,6 +154,64 @@ public class RewardServiceImpl implements RewardService {
                 .build();
     }
 
+    /**
+     * 간헐적 단식 완료 리워드 (목표 달성 시 자동 1회 지급).
+     * - RewardConfig.FASTING_COMPLETE 활성화 + dailyLimit 체크
+     * - FastingRecordServiceImpl.endFasting에서 호출 (예외 swallow는 호출자에서 처리)
+     */
+    @Override
+    public RewardDto.rewardResponse grantFastingCompleteReward(String socialId, Long fastingRecordId) {
+        UserB user = findUser(socialId);
+        Long userId = user.getId();
+
+        List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(RewardType.FASTING_COMPLETE);
+        if (configs.isEmpty()) {
+            log.info("간헐적 단식 완료 리워드 비활성 (userId={})", userId);
+            return RewardDto.rewardResponse.builder().earnedGrams(0).message("").build();
+        }
+
+        checkDailyLimit(userId, RewardType.FASTING_COMPLETE);
+
+        int earnedGrams = determineAmount(RewardType.FASTING_COMPLETE);
+        addPointsToUser(user, earnedGrams, PieceTransactionType.REWARD_FASTING_COMPLETE, fastingRecordId);
+
+        RewardHistory history = new RewardHistory(
+                userId, RewardType.FASTING_COMPLETE, earnedGrams, RewardStatus.SUCCESS, fastingRecordId);
+        rewardHistoryRepository.save(history);
+
+        incrementDaily(userId, RewardType.FASTING_COMPLETE, earnedGrams);
+
+        log.info("간헐적 단식 완료 리워드: userId={}, fastingId={}, earned={}g", userId, fastingRecordId, earnedGrams);
+        return RewardDto.rewardResponse.builder()
+                .earnedGrams(earnedGrams)
+                .message(GramConstants.earnMessage(earnedGrams))
+                .build();
+    }
+
+    /** 간헐적 단식 완료 결과 페이지 광고 보너스 (또받기). */
+    @Override
+    public RewardDto.rewardResponse grantFastingAdBonus(String socialId) {
+        UserB user = findUser(socialId);
+        Long userId = user.getId();
+
+        checkDailyLimit(userId, RewardType.FASTING_AD_BONUS);
+
+        int earnedGrams = determineAmount(RewardType.FASTING_AD_BONUS);
+        addPointsToUser(user, earnedGrams, PieceTransactionType.REWARD_FASTING_AD_BONUS, null);
+
+        RewardHistory history = new RewardHistory(
+                userId, RewardType.FASTING_AD_BONUS, earnedGrams, RewardStatus.SUCCESS, null);
+        rewardHistoryRepository.save(history);
+
+        incrementDaily(userId, RewardType.FASTING_AD_BONUS, earnedGrams);
+
+        log.info("간헐적 단식 광고 보너스: userId={}, earned={}g", userId, earnedGrams);
+        return RewardDto.rewardResponse.builder()
+                .earnedGrams(earnedGrams)
+                .message(GramConstants.earnMessage(earnedGrams))
+                .build();
+    }
+
     @Override
     public RewardDto.historyResponse getRewardHistory(String socialId) {
         UserB user = findUser(socialId);
@@ -514,6 +572,8 @@ public class RewardServiceImpl implements RewardService {
             case EXCHANGE -> "토스포인트로 바꾸기";
             case SIGNUP_BONUS -> "가입 축하";
             case FIRST_ATTENDANCE_BONUS -> "첫 출석 프로모션";
+            case FASTING_COMPLETE -> "간헐적 단식 완료";
+            case FASTING_AD_BONUS -> "간헐적 단식 광고 보너스";
             case PROFILE_BONUS -> "프로필 완성 (키)";
             case PROFILE_BONUS_GENDER -> "프로필 완성 (성별)";
             case PROFILE_BONUS_BIRTHDATE -> "프로필 완성 (생년월일)";

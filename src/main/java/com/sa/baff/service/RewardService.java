@@ -56,4 +56,10 @@ public interface RewardService {
      * - 토스 API 실패 시 RewardHistory FAILED 기록 + 예외 swallow
      */
     void claimFirstAttendanceBonus(Long userId, String socialId);
+
+    /** 간헐적 단식 완료 리워드 (목표 달성 시 자동 지급). */
+    RewardDto.rewardResponse grantFastingCompleteReward(String socialId, Long fastingRecordId);
+
+    /** 간헐적 단식 완료 결과 페이지 광고 보너스. */
+    RewardDto.rewardResponse grantFastingAdBonus(String socialId);
 }

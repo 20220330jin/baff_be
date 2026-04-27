@@ -19,5 +19,7 @@ public enum AdWatchLocation {
     WEIGHT_RESULT,               // S5-18: 체중기록 완료 결과 페이지 (이미지배너)
     EXCHANGE_RESULT,             // S6-4: 환전 완료 결과 페이지 (이미지배너)
     MISSION_RESULT,              // S6-4/S6-8: 미션 완료 결과 페이지 (이미지배너, 미션 시스템 착수 시)
-    ATTENDANCE_STREAK_SAVE       // S7-14: 어제 놓친 출석 연속을 광고 시청으로 유지
+    ATTENDANCE_STREAK_SAVE,      // S7-14: 어제 놓친 출석 연속을 광고 시청으로 유지
+    FASTING_RESULT,              // 간헐적 단식 완료 결과 페이지 (이미지배너)
+    FASTING_AD_BONUS             // 간헐적 단식 완료 광고 보너스 (또받기)
 }

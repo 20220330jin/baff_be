@@ -26,6 +26,10 @@ public enum RewardType {
     // 광고 보너스
     REVIEW_AD_BONUS,         // 리뷰 광고 보너스
 
+    // 간헐적 단식
+    FASTING_COMPLETE,        // 간헐적 단식 목표 시간 완료 시 자동 지급
+    FASTING_AD_BONUS,        // 간헐적 단식 완료 결과 페이지 광고 보너스
+
     // S6-28 주간 마일스톤 (체중기록 횟수 기반 자동 백그라운드 보상)
     WEEKLY_MILESTONE_3,      // 이번주 체중기록 3회 달성
     WEEKLY_MILESTONE_5,      // 이번주 체중기록 5회 달성

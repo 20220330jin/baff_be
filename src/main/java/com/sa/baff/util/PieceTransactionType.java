@@ -21,6 +21,8 @@ public enum PieceTransactionType {
     REWARD_WEEKLY_MILESTONE_3,         // S6-28 주간 마일스톤 리워드 - 3회
     REWARD_WEEKLY_MILESTONE_5,         // S6-28 주간 마일스톤 리워드 - 5회
     REWARD_WEEKLY_MILESTONE_7,         // S6-28 주간 마일스톤 리워드 - 7회
+    REWARD_FASTING_COMPLETE,           // 간헐적 단식 완료 리워드
+    REWARD_FASTING_AD_BONUS,           // 간헐적 단식 완료 광고 보너스
 
     // === 환전 (Phase 1) ===
     EXCHANGE_REQUEST,        // 환전 요청 (차감)

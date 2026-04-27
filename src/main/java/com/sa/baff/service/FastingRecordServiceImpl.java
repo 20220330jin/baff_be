@@ -37,6 +37,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
     private final AiAnalysisRepository aiAnalysisRepository;
     private final AiFeatureConfigRepository aiFeatureConfigRepository;
     private final AnthropicApiClient anthropicApiClient;
+    private final RewardService rewardService;
 
     /** 모드별 기본 목표 시간 */
     private static final Map<FastingMode, Integer> MODE_TARGET_HOURS = Map.of(
@@ -98,6 +99,15 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         record.setCompleted(completed);
 
         fastingRecordRepository.save(record);
+
+        // 목표 달성 시 그램 자동 지급 (RewardConfig.FASTING_COMPLETE 비활성 시 0g, 예외 swallow)
+        if (completed) {
+            try {
+                rewardService.grantFastingCompleteReward(socialId, record.getId());
+            } catch (Exception e) {
+                log.warn("간헐적 단식 완료 리워드 지급 실패 (fastingId={}): {}", record.getId(), e.getMessage());
+            }
+        }
 
         return new FastingRecordDto.EndFastingResponse(record.getId(), (int) actualMinutes, completed);
     }
