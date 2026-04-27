@@ -235,8 +235,12 @@ public class UserServiceImpl implements UserService {
             Optional<UserB> active = userRepository.findBySocialId(socialId);
             if (active.isPresent()) {
                 user = active.get();
-                if (user.getDelYn() != null && user.getDelYn() == 'Y') {
-                    log.info("[loginWithToss] reactivating unlinked (raw match) socialId={}", socialId);
+                boolean delYnNeedsReactivate = user.getDelYn() != null && user.getDelYn() == 'Y';
+                boolean statusNeedsReactivate = user.getStatus() != null && user.getStatus() != com.sa.baff.domain.type.UserStatus.ACTIVE
+                        && user.getStatus() != com.sa.baff.domain.type.UserStatus.MERGED;
+                if (delYnNeedsReactivate || statusNeedsReactivate) {
+                    log.info("[loginWithToss] reactivating user (delYn={}, status={}) socialId={}",
+                            user.getDelYn(), user.getStatus(), socialId);
                     userRepository.reactivate(user.getId());
                 } else {
                     log.info("[loginWithToss] active user found userId={}", user.getId());

@@ -76,8 +76,11 @@ public class UserRepositoryImpl extends QuerydslRepositorySupport implements Use
     public void reactivate(Long userId) {
         QUserB user = QUserB.userB;
 
+        // delYn='N'만 복구하면 status가 WITHDRAWN 상태로 남아 resolveActiveUserBySocialId가 empty 반환 → /me 400.
+        // status도 ACTIVE로 함께 복구해야 정상 활성화.
         jpaQueryFactory.update(user)
                 .set(user.delYn, 'N')
+                .set(user.status, UserStatus.ACTIVE)
                 .set(user.modDateTime, DateTimeUtils.now())
                 .where(user.id.eq(userId))
                 .execute();
