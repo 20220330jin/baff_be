@@ -17,7 +17,7 @@ import java.util.Map;
  * 인증/권한은 SecurityConfig의 /api/admin/** 가드 정책에 위임.
  */
 @RestController
-@RequestMapping("/api/admin/self-banners")
+@RequestMapping("/api/admin/dashboard/self-banners")
 @RequiredArgsConstructor
 public class AdminSelfBannerController {
 
