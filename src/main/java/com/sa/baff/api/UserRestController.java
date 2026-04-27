@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import java.util.Map;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -90,21 +91,25 @@ public class UserRestController {
     }
 
     /**
-     * S6-30 성별 입력 API.
-     * body: "MALE" | "FEMALE" | "OTHER" (JSON 문자열). 최초 입력 시 1g 지급.
+     * S6-30 성별 입력 API. 최초 입력 시 보너스 그램 지급.
+     * body: "MALE" | "FEMALE" | "OTHER".
+     * 응답: { bonusAmount: int } — 0이면 이미 받은 적 있음 (변경만 반영).
      */
     @PostMapping("/insertGender")
-    public void insertGender(@AuthenticationPrincipal String socialId, @RequestBody Gender gender) {
-        userService.insertGender(socialId, gender);
+    public ResponseEntity<Map<String, Integer>> insertGender(@AuthenticationPrincipal String socialId, @RequestBody Gender gender) {
+        int bonusAmount = userService.insertGender(socialId, gender);
+        return ResponseEntity.ok(Map.of("bonusAmount", bonusAmount));
     }
 
     /**
-     * S6-30 생년월일 입력 API.
-     * body: "YYYY-MM-DD" (ISO-8601 JSON 문자열). 최초 입력 시 1g 지급.
+     * S6-30 생년월일 입력 API. 최초 입력 시 보너스 그램 지급.
+     * body: "YYYY-MM-DD".
+     * 응답: { bonusAmount: int }.
      */
     @PostMapping("/insertBirthdate")
-    public void insertBirthdate(@AuthenticationPrincipal String socialId, @RequestBody LocalDate birthdate) {
-        userService.insertBirthdate(socialId, birthdate);
+    public ResponseEntity<Map<String, Integer>> insertBirthdate(@AuthenticationPrincipal String socialId, @RequestBody LocalDate birthdate) {
+        int bonusAmount = userService.insertBirthdate(socialId, birthdate);
+        return ResponseEntity.ok(Map.of("bonusAmount", bonusAmount));
     }
 
     @PostMapping("/withdrawal")

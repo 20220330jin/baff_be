@@ -37,11 +37,11 @@ public interface UserService {
 
     void insertHeight(String socialId, Double height);
 
-    /** S6-30: 성별 입력 (최초 1회 PROFILE_BONUS_GENDER 1g 지급). */
-    void insertGender(String socialId, Gender gender);
+    /** S6-30: 성별 입력. 최초 1회 PROFILE_BONUS_GENDER 지급. 반환: 지급된 그램 (0이면 이미 받음). */
+    int insertGender(String socialId, Gender gender);
 
-    /** S6-30: 생년월일 입력 (최초 1회 PROFILE_BONUS_BIRTHDATE 1g 지급). */
-    void insertBirthdate(String socialId, LocalDate birthdate);
+    /** S6-30: 생년월일 입력. 최초 1회 PROFILE_BONUS_BIRTHDATE 지급. 반환: 지급된 그램. */
+    int insertBirthdate(String socialId, LocalDate birthdate);
 
     UserB findOrCreateSocialUser(String socialId, String email, String name, String profileUrl, String provider);
 

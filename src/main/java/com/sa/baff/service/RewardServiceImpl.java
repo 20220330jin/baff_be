@@ -308,19 +308,19 @@ public class RewardServiceImpl implements RewardService {
      * - 예외는 swallow + warn log로 호출자 경로(필드 저장) 영향 억제
      */
     @Override
-    public void claimProfileBonus(Long userId, UserB user, RewardType rewardType) {
+    public int claimProfileBonus(Long userId, UserB user, RewardType rewardType) {
         try {
             List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(rewardType);
             if (configs.isEmpty()) {
                 log.info("프로필 보너스 설정 없음 또는 비활성화 (userId={}, type={})", userId, rewardType);
-                return;
+                return 0;
             }
             boolean already = rewardHistoryRepository
                     .existsByUserIdAndRewardTypeAndStatusAndDelYn(
                             userId, rewardType, RewardStatus.SUCCESS, 'N');
             if (already) {
                 log.info("프로필 보너스 이미 지급됨 (userId={}, type={})", userId, rewardType);
-                return;
+                return 0;
             }
 
             int amount = determineAmount(rewardType);
@@ -332,8 +332,10 @@ public class RewardServiceImpl implements RewardService {
             rewardHistoryRepository.save(history);
 
             log.info("프로필 보너스 지급: userId={}, type={}, amount={}g", userId, rewardType, amount);
+            return amount;
         } catch (Exception e) {
             log.warn("프로필 보너스 지급 실패 (userId={}, type={}): {}", userId, rewardType, e.getMessage());
+            return 0;
         }
     }
 

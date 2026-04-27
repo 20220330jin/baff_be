@@ -32,7 +32,8 @@ public interface RewardService {
      * S6-15(height) / S6-30(gender, birthdate) 공용.
      * @param rewardType PROFILE_BONUS | PROFILE_BONUS_GENDER | PROFILE_BONUS_BIRTHDATE
      */
-    void claimProfileBonus(Long userId, UserB user, RewardType rewardType);
+    /** @return 지급된 그램 (0이면 비활성/이미 지급/실패). */
+    int claimProfileBonus(Long userId, UserB user, RewardType rewardType);
 
     /**
      * S6-28 주간 마일스톤 체크 & 지급.
