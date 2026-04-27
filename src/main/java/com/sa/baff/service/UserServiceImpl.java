@@ -227,54 +227,70 @@ public class UserServiceImpl implements UserService {
                 tossAuthService.resolveTossUserKey(request.getAuthorizationCode(), request.getReferrer());
 
         String socialId = tossResult.tossUserKey();
+        log.info("[loginWithToss] start socialId={}", socialId);
 
-        // 1) 활성 row 조회
-        UserB user = userRepository.findBySocialId(socialId)
-                .map(existingUser -> {
-                    if (existingUser.getDelYn() == 'Y') {
-                        log.info("Reactivating unlinked Toss user (raw match): {}", socialId);
-                        userRepository.reactivate(existingUser.getId());
+        UserB user;
+        try {
+            // 1) 활성 row 조회
+            Optional<UserB> active = userRepository.findBySocialId(socialId);
+            if (active.isPresent()) {
+                user = active.get();
+                if (user.getDelYn() != null && user.getDelYn() == 'Y') {
+                    log.info("[loginWithToss] reactivating unlinked (raw match) socialId={}", socialId);
+                    userRepository.reactivate(user.getId());
+                } else {
+                    log.info("[loginWithToss] active user found userId={}", user.getId());
+                }
+            } else {
+                // 2) withdrawal로 socialId가 변경된 row 매칭
+                String pattern = "withdrawalUser_" + socialId + "_%";
+                Optional<UserB> withdrawn;
+                try {
+                    withdrawn = userRepository.findWithdrawnByOriginalSocialId(pattern, 'Y');
+                } catch (Exception e) {
+                    log.warn("[loginWithToss] findWithdrawnByOriginalSocialId 실패 (무시하고 신규 가입 분기): {}", e.getMessage());
+                    withdrawn = Optional.empty();
+                }
+
+                if (withdrawn.isPresent()) {
+                    UserB w = withdrawn.get();
+                    String decryptedEmail = tossResult.email();
+                    String restoredEmail = (decryptedEmail != null && !decryptedEmail.isBlank())
+                            ? decryptedEmail
+                            : "toss_" + socialId + "@toss.im";
+                    log.info("[loginWithToss] restoring withdrawn user userId={}, socialId={}", w.getId(), socialId);
+                    userRepository.reactivateWithRestore(w.getId(), socialId, restoredEmail);
+                    w.setSocialId(socialId);
+                    w.setEmail(restoredEmail);
+                    user = w;
+                } else {
+                    // 3) 신규 가입
+                    String decryptedEmail = tossResult.email();
+                    String email = (decryptedEmail != null && !decryptedEmail.isBlank())
+                            ? decryptedEmail
+                            : "toss_" + socialId + "@toss.im";
+
+                    String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
+                    UserB newUser = new UserB(email, null, randomImageUrl, socialId, "toss", "TOSS");
+                    nicknameGeneratorService.generateUniqueNicknameAndSave(newUser);
+                    log.info("[loginWithToss] new user created userId={}, socialId={}", newUser.getId(), socialId);
+
+                    try {
+                        rewardService.claimSignupBonus(newUser.getId(), newUser);
+                    } catch (Exception e) {
+                        log.warn("[SIGNUP_BONUS] Toss 신규 가입 지급 실패 (userId={}): {}", newUser.getId(), e.getMessage());
                     }
-                    return existingUser;
-                })
-                // 2) withdrawal로 socialId가 변경된 row 조회 → 동일 토스 userKey 재가입 매칭
-                .orElseGet(() -> userRepository.findWithdrawnByOriginalSocialId(socialId)
-                        .map(withdrawn -> {
-                            String decryptedEmail = tossResult.email();
-                            String restoredEmail = (decryptedEmail != null && !decryptedEmail.isBlank())
-                                    ? decryptedEmail
-                                    : "toss_" + socialId + "@toss.im";
-                            log.info("Restoring withdrawn Toss user (re-login): {} (userId={})",
-                                    socialId, withdrawn.getId());
-                            userRepository.reactivateWithRestore(withdrawn.getId(), socialId, restoredEmail);
-                            // 메모리 entity도 동기화
-                            withdrawn.setSocialId(socialId);
-                            withdrawn.setEmail(restoredEmail);
-                            return withdrawn;
-                        })
-                        // 3) 그래도 없으면 신규 가입
-                        .orElseGet(() -> {
-                            String decryptedEmail = tossResult.email();
-                            String email = (decryptedEmail != null && !decryptedEmail.isBlank())
-                                    ? decryptedEmail
-                                    : "toss_" + socialId + "@toss.im";
+                    user = newUser;
+                }
+            }
+        } catch (Exception e) {
+            log.error("[loginWithToss] 처리 실패 socialId={}: {}", socialId, e.getMessage(), e);
+            throw e;
+        }
 
-                            String randomImageUrl = nicknameGeneratorService.getRandomProfileImageUrl();
-                            UserB newUser = new UserB(email, null, randomImageUrl, socialId, "toss", "TOSS");
-                            nicknameGeneratorService.generateUniqueNicknameAndSave(newUser);
-                            log.info("New Toss user created: {}", socialId);
-
-                            // 신규 가입 즉시 SIGNUP_BONUS 지급 (RewardConfig 활성화 + dedup 내부 처리, 예외 swallow)
-                            try {
-                                rewardService.claimSignupBonus(newUser.getId(), newUser);
-                            } catch (Exception e) {
-                                log.warn("[SIGNUP_BONUS] Toss 신규 가입 지급 실패 (userId={}): {}",
-                                        newUser.getId(), e.getMessage());
-                            }
-                            return newUser;
-                        }));
-
-        return jwtProvider.create(user.getSocialId(), user.getRole().name());
+        String jwt = jwtProvider.create(user.getSocialId(), user.getRole().name());
+        log.info("[loginWithToss] success userId={}, jwt issued", user.getId());
+        return jwt;
     }
 
     @Override
