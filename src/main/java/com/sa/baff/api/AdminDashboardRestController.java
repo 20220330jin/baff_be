@@ -8,11 +8,14 @@ import com.sa.baff.model.dto.AdminDashboardDto;
 import com.sa.baff.model.dto.AiAnalysisDto;
 import com.sa.baff.repository.AiFeatureConfigRepository;
 import com.sa.baff.repository.RewardConfigRepository;
+import com.sa.baff.repository.SelfBannerAdRepository;
 import com.sa.baff.repository.SmartPushConfigRepository;
 import com.sa.baff.repository.SmartPushHistoryRepository;
+import com.sa.baff.domain.SelfBannerAd;
 import com.sa.baff.service.AdminDashboardService;
 import com.sa.baff.service.SmartPushService;
 import com.sa.baff.util.AiFeatureType;
+import com.sa.baff.util.AdWatchLocation;
 import com.sa.baff.util.RewardType;
 import com.sa.baff.util.SmartPushTargetStrategy;
 import com.sa.baff.util.SmartPushType;
@@ -46,6 +49,7 @@ public class AdminDashboardRestController {
     private final SmartPushConfigRepository smartPushConfigRepository;
     private final SmartPushHistoryRepository smartPushHistoryRepository;
     private final SmartPushService smartPushService;
+    private final SelfBannerAdRepository selfBannerAdRepository;
 
     // ==================== 대시보드 개요 ====================
 
@@ -583,5 +587,55 @@ public class AdminDashboardRestController {
     @GetMapping("/gram-economy/snapshot")
     public ResponseEntity<AdminDashboardDto.GramEconomySnapshot> getGramEconomySnapshot() {
         return ResponseEntity.ok(adminDashboardService.getGramEconomySnapshot());
+    }
+
+    // ===== 자체 배너광고 CRUD =====
+
+    @GetMapping("/self-banners")
+    public ResponseEntity<List<SelfBannerAd>> listSelfBanners() {
+        return ResponseEntity.ok(selfBannerAdRepository.findByDelYnOrderByPriorityAsc('N'));
+    }
+
+    @PostMapping("/self-banners")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> createSelfBanner(@RequestBody Map<String, Object> body) {
+        SelfBannerAd b = new SelfBannerAd();
+        b.setBannerType((String) body.get("bannerType"));
+        b.setPosition(AdWatchLocation.valueOf((String) body.get("position")));
+        b.setTitle((String) body.get("title"));
+        b.setImageUrl((String) body.get("imageUrl"));
+        b.setLinkUrl((String) body.get("linkUrl"));
+        if (body.get("priority") != null) b.setPriority((Integer) body.get("priority"));
+        if (body.get("dailyImpressionLimit") != null) {
+            b.setDailyImpressionLimit((Integer) body.get("dailyImpressionLimit"));
+        }
+        b.setEnabled(body.get("enabled") == null || (Boolean) body.get("enabled"));
+        selfBannerAdRepository.save(b);
+        return ResponseEntity.ok(Map.of("id", b.getId(), "message", "등록 완료"));
+    }
+
+    @PutMapping("/self-banners/{id}")
+    @Transactional
+    public ResponseEntity<Map<String, String>> updateSelfBanner(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        SelfBannerAd b = selfBannerAdRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("배너 없음"));
+        if (body.containsKey("bannerType")) b.setBannerType((String) body.get("bannerType"));
+        if (body.containsKey("position")) b.setPosition(AdWatchLocation.valueOf((String) body.get("position")));
+        if (body.containsKey("title")) b.setTitle((String) body.get("title"));
+        if (body.containsKey("imageUrl")) b.setImageUrl((String) body.get("imageUrl"));
+        if (body.containsKey("linkUrl")) b.setLinkUrl((String) body.get("linkUrl"));
+        if (body.containsKey("priority")) b.setPriority((Integer) body.get("priority"));
+        if (body.containsKey("dailyImpressionLimit")) {
+            b.setDailyImpressionLimit((Integer) body.get("dailyImpressionLimit"));
+        }
+        if (body.containsKey("enabled")) b.setEnabled((Boolean) body.get("enabled"));
+        return ResponseEntity.ok(Map.of("message", "수정 완료"));
+    }
+
+    @DeleteMapping("/self-banners/{id}")
+    @Transactional
+    public ResponseEntity<Map<String, String>> deleteSelfBanner(@PathVariable Long id) {
+        selfBannerAdRepository.deleteById(id);
+        return ResponseEntity.ok(Map.of("message", "삭제 완료"));
     }
 }
