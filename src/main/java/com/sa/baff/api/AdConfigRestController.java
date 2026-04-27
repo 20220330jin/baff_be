@@ -1,12 +1,20 @@
 package com.sa.baff.api;
 
 import com.sa.baff.domain.AdPositionConfig;
+import com.sa.baff.domain.SelfBannerAd;
+import com.sa.baff.domain.UserB;
 import com.sa.baff.repository.AdPositionConfigRepository;
+import com.sa.baff.repository.AdWatchEventRepository;
+import com.sa.baff.repository.SelfBannerAdRepository;
+import com.sa.baff.repository.UserRepository;
 import com.sa.baff.util.AdWatchLocation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,12 +25,23 @@ import java.util.Map;
 public class AdConfigRestController {
 
     private final AdPositionConfigRepository adPositionConfigRepository;
+    private final SelfBannerAdRepository selfBannerAdRepository;
+    private final AdWatchEventRepository adWatchEventRepository;
+    private final UserRepository userRepository;
 
     /**
-     * 특정 위치의 배너 광고 설정 조회 (FE용 public API)
+     * 특정 위치의 배너 광고 설정 조회 (FE용 public API).
+     *
+     * 응답에 추가 필드:
+     *  - hasSelfBanners: 활성 자체배너 존재 여부 (FE에서 자체배너 우선 노출 판단)
+     *  - limitReached: 토스 광고 빈도 제한 도달 여부 (frequencyLimitEnabled + dailyImpressionLimit 체크)
+     *
+     * 나만그래 패턴: 자체배너 우선 노출, 한도 도달 시 토스 차단 → 자체배너 fallback.
      */
     @GetMapping("/config/{position}")
-    public ResponseEntity<Map<String, Object>> getAdConfig(@PathVariable String position) {
+    public ResponseEntity<Map<String, Object>> getAdConfig(
+            @PathVariable String position,
+            @AuthenticationPrincipal String socialId) {
         try {
             AdWatchLocation location = AdWatchLocation.valueOf(position);
             return adPositionConfigRepository.findByPosition(location)
@@ -37,6 +56,30 @@ public class AdConfigRestController {
                         map.put("tossImageAdGroupId", config.getTossImageAdGroupId() != null ? config.getTossImageAdGroupId() : "");
                         map.put("tossImageAdEnabled", config.getIsTossImageAdEnabled());
                         map.put("tossImageAdRatio", config.getTossImageAdRatio() != null ? config.getTossImageAdRatio() : 0);
+
+                        // 자체배너 우선 노출 신호
+                        List<SelfBannerAd> selfBanners = selfBannerAdRepository
+                                .findByPositionAndEnabledAndDelYnOrderByPriorityAsc(location, true, 'N');
+                        map.put("hasSelfBanners", !selfBanners.isEmpty());
+
+                        // 빈도 제한 enforce — 유저별 오늘 토스 광고 노출 수 vs dailyImpressionLimit
+                        boolean limitReached = false;
+                        if (Boolean.TRUE.equals(config.getFrequencyLimitEnabled())
+                                && config.getDailyImpressionLimit() != null
+                                && config.getDailyImpressionLimit() > 0
+                                && socialId != null) {
+                            UserB user = userRepository.findBySocialId(socialId).orElse(null);
+                            if (user != null) {
+                                LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+                                LocalDateTime endOfDay = startOfDay.plusDays(1);
+                                long todayCount = adWatchEventRepository
+                                        .countByUserIdAndWatchLocationAndRegDateTimeBetween(
+                                                user.getId(), location, startOfDay, endOfDay);
+                                limitReached = todayCount >= config.getDailyImpressionLimit();
+                            }
+                        }
+                        map.put("limitReached", limitReached);
+
                         return ResponseEntity.ok(map);
                     })
                     .orElse(ResponseEntity.notFound().build());
