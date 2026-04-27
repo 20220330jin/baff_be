@@ -753,6 +753,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .isActive(Boolean.TRUE.equals(c.getEnabled()))
                         .regDateTime(c.getRegDateTime() != null ? c.getRegDateTime().format(DATETIME_FORMATTER) : null)
                         .modDateTime(c.getModDateTime() != null ? c.getModDateTime().format(DATETIME_FORMATTER) : null)
+                        .promotionCode(c.getPromotionCode())
                         .build())
                 .collect(Collectors.toList());
         int start = (int) pageable.getOffset();

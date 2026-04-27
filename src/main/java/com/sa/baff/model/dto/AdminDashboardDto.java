@@ -221,6 +221,7 @@ public class AdminDashboardDto {
         private boolean isActive;
         private String regDateTime;
         private String modDateTime;
+        private String promotionCode;
     }
 
     @Data

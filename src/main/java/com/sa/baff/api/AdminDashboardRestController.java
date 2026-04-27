@@ -352,6 +352,7 @@ public class AdminDashboardRestController {
         String description = (String) body.get("description");
         Boolean enabled = body.get("enabled") != null ? (Boolean) body.get("enabled") : true;
         Integer threshold = (Integer) body.get("threshold");
+        String promotionCode = (String) body.get("promotionCode");
 
         RewardConfig config = new RewardConfig();
         config.setRewardType(RewardType.valueOf(rewardType));
@@ -362,6 +363,9 @@ public class AdminDashboardRestController {
         config.setProbability(100);
         config.setIsFixed(true);
         config.setThreshold(threshold);
+        if (promotionCode != null && !promotionCode.isBlank()) {
+            config.setPromotionCode(promotionCode.trim());
+        }
 
         rewardConfigRepository.save(config);
         return ResponseEntity.ok(Map.of("id", config.getId(), "message", "설정이 추가되었습니다."));
@@ -377,6 +381,10 @@ public class AdminDashboardRestController {
         if (body.containsKey("description")) config.setDescription((String) body.get("description"));
         if (body.containsKey("enabled")) config.setEnabled((Boolean) body.get("enabled"));
         if (body.containsKey("threshold")) config.setThreshold((Integer) body.get("threshold"));
+        if (body.containsKey("promotionCode")) {
+            String code = (String) body.get("promotionCode");
+            config.setPromotionCode(code == null || code.isBlank() ? null : code.trim());
+        }
         rewardConfigRepository.save(config);
         return ResponseEntity.ok(Map.of("message", "설정이 수정되었습니다."));
     }

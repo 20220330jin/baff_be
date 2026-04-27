@@ -48,4 +48,11 @@ public class RewardConfig extends BaseEntity {
 
     /** 쿨타임 (분 단위, null이면 쿨타임 없음) */
     private Integer cooldownMinutes;
+
+    /**
+     * 토스 프로모션 코드 (FIRST_ATTENDANCE_BONUS 등 토스포인트 직접 지급 타입 전용).
+     * 토스 콘솔에서 발급받은 코드 입력. 비어있으면 토스포인트 지급 불가 → enabled여도 fallback.
+     */
+    @Column(length = 100)
+    private String promotionCode;
 }

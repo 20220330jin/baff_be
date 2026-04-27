@@ -5,6 +5,7 @@ import com.sa.baff.domain.*;
 import com.sa.baff.model.dto.RewardDto;
 import com.sa.baff.repository.*;
 import com.sa.baff.service.account.AccountLinkedUserResolver;
+import com.sa.baff.service.reward.TossPromotionApiClient;
 import com.sa.baff.util.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -33,6 +34,7 @@ public class RewardServiceImpl implements RewardService {
     private final UserRewardDailyRepository userRewardDailyRepository;
     private final UserRewardWeeklyRepository userRewardWeeklyRepository;
     private final AdWatchEventRepository adWatchEventRepository;
+    private final TossPromotionApiClient tossPromotionApiClient;
 
     private final Random random = new Random();
 
@@ -211,7 +213,8 @@ public class RewardServiceImpl implements RewardService {
      * - 동일 유저에 SUCCESS 이력 있으면 skip
      * - 예외는 swallow + warn log로 호출자 경로 영향 억제 (단, 동일 트랜잭션 flush/commit 시점 예외는 격리 불가 — spec §10 리스크 참조)
      */
-    void claimSignupBonus(Long userId, UserB user) {
+    @Override
+    public void claimSignupBonus(Long userId, UserB user) {
         try {
             List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(RewardType.SIGNUP_BONUS);
             if (configs.isEmpty()) {
@@ -274,6 +277,71 @@ public class RewardServiceImpl implements RewardService {
             log.info("프로필 보너스 지급: userId={}, type={}, amount={}g", userId, rewardType, amount);
         } catch (Exception e) {
             log.warn("프로필 보너스 지급 실패 (userId={}, type={}): {}", userId, rewardType, e.getMessage());
+        }
+    }
+
+    /**
+     * 첫 출석 프로모션 보너스 (토스포인트 10원, 생애 1회).
+     * 나만그래 FIRST_VOTE_BONUS 패턴 복제.
+     * - RewardConfig.FIRST_ATTENDANCE_BONUS enabled=true + promotionCode 비어있지 않을 때만 지급 시도
+     * - 이미 SUCCESS/PENDING 이력 있으면 skip (1회성 보장)
+     * - 토스 API 호출 실패 시 RewardHistory FAILED로 기록, 예외 swallow (출석 본 경로 영향 없도록)
+     * - 토스포인트 직접 지급이므로 그램(piece) 적립 없음
+     */
+    @Override
+    public void claimFirstAttendanceBonus(Long userId, String socialId) {
+        try {
+            RewardConfig config = rewardConfigRepository
+                    .findActiveConfigs(RewardType.FIRST_ATTENDANCE_BONUS).stream()
+                    .findFirst().orElse(null);
+            if (config == null || !Boolean.TRUE.equals(config.getEnabled())) {
+                log.debug("첫 출석 프로모션 비활성화 (userId={})", userId);
+                return;
+            }
+            String promotionCode = config.getPromotionCode();
+            if (promotionCode == null || promotionCode.isBlank()) {
+                log.info("첫 출석 프로모션 코드 미입력 — skip (userId={})", userId);
+                return;
+            }
+
+            boolean already = rewardHistoryRepository.existsByUserIdAndRewardTypeAndStatusAndDelYn(
+                    userId, RewardType.FIRST_ATTENDANCE_BONUS, RewardStatus.SUCCESS, 'N')
+                    || rewardHistoryRepository.existsByUserIdAndRewardTypeAndStatusAndDelYn(
+                    userId, RewardType.FIRST_ATTENDANCE_BONUS, RewardStatus.PENDING, 'N');
+            if (already) {
+                log.debug("첫 출석 프로모션 이미 지급됨 또는 진행중 (userId={})", userId);
+                return;
+            }
+
+            int amount = config.getAmount() != null ? config.getAmount() : GramConstants.FIRST_ATTENDANCE_TOSS_POINT_AMOUNT;
+
+            RewardHistory history = new RewardHistory(
+                    userId, RewardType.FIRST_ATTENDANCE_BONUS, amount, RewardStatus.PENDING, null);
+            rewardHistoryRepository.save(history);
+
+            try {
+                if (!tossPromotionApiClient.isAvailable()) {
+                    log.warn("[FIRST_ATTENDANCE_BONUS] tossWebClient 미설정 — 더미 처리 (userId={})", userId);
+                    history.setStatus(RewardStatus.SUCCESS);
+                    history.setPromotionKey(promotionCode);
+                    history.setPromotionTransactionId("dummy");
+                } else {
+                    String key = tossPromotionApiClient.grantReward(socialId, promotionCode, amount);
+                    history.setPromotionKey(promotionCode);
+                    history.setPromotionTransactionId(key);
+                    history.setStatus(RewardStatus.SUCCESS);
+                    log.info("첫 출석 프로모션 토스포인트 {}원 지급 성공 (userId={})", amount, userId);
+                }
+                rewardHistoryRepository.save(history);
+            } catch (Exception e) {
+                log.error("첫 출석 프로모션 지급 실패 (userId={}): {}", userId, e.getMessage(), e);
+                history.setStatus(RewardStatus.FAILED);
+                String msg = e.getMessage();
+                history.setErrorMessage(msg != null ? msg.substring(0, Math.min(msg.length(), 500)) : "알 수 없는 오류");
+                rewardHistoryRepository.save(history);
+            }
+        } catch (Exception e) {
+            log.warn("첫 출석 프로모션 처리 실패 (userId={}): {}", userId, e.getMessage());
         }
     }
 
@@ -446,6 +514,7 @@ public class RewardServiceImpl implements RewardService {
             case REVIEW_AD_BONUS -> "리뷰 광고 보너스";
             case EXCHANGE -> "토스포인트로 바꾸기";
             case SIGNUP_BONUS -> "가입 축하";
+            case FIRST_ATTENDANCE_BONUS -> "첫 출석 프로모션";
             case PROFILE_BONUS -> "프로필 완성 (키)";
             case PROFILE_BONUS_GENDER -> "프로필 완성 (성별)";
             case PROFILE_BONUS_BIRTHDATE -> "프로필 완성 (생년월일)";

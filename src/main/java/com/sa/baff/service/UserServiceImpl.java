@@ -149,6 +149,13 @@ public class UserServiceImpl implements UserService {
             userEntity = new UserB(email, null, randomImageUrl, socialId, provider, platform);
             nicknameGeneratorService.generateUniqueNicknameAndSave(userEntity);
             System.out.println("=====New user registered: " + socialId);
+
+            // 신규 가입 즉시 SIGNUP_BONUS 지급 (RewardConfig 활성화 + dedup은 RewardService 내부 처리, 예외 swallow)
+            try {
+                rewardService.claimSignupBonus(userEntity.getId(), userEntity);
+            } catch (Exception e) {
+                System.out.println("[SIGNUP_BONUS] 지급 실패 (userId=" + userEntity.getId() + "): " + e.getMessage());
+            }
         } else {
             System.out.println("=====Existing user logged in: " + socialId);
         }

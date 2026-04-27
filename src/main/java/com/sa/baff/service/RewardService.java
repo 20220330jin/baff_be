@@ -40,4 +40,20 @@ public interface RewardService {
      * grantWeightReward 등 WEIGHT_LOG 지급 직후 호출 — 예외는 내부 swallow.
      */
     void claimWeeklyMilestones(Long userId, UserB user);
+
+    /**
+     * 가입 축하 보너스 지급 (그램, 가입 즉시 1회).
+     * - RewardConfig.SIGNUP_BONUS 활성화 시 지급
+     * - 동일 유저 SUCCESS 이력 있으면 skip
+     * - 예외 swallow (호출자 가입 경로 영향 없도록)
+     */
+    void claimSignupBonus(Long userId, UserB user);
+
+    /**
+     * 첫 출석 프로모션 (토스포인트 직접 지급, 1회).
+     * - RewardConfig.FIRST_ATTENDANCE_BONUS 활성화 + promotionCode 설정 시 지급
+     * - 동일 유저 SUCCESS/PENDING 이력 있으면 skip (생애 1회 보장)
+     * - 토스 API 실패 시 RewardHistory FAILED 기록 + 예외 swallow
+     */
+    void claimFirstAttendanceBonus(Long userId, String socialId);
 }

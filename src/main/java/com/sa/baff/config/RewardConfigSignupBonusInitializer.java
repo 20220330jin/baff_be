@@ -43,7 +43,7 @@ public class RewardConfigSignupBonusInitializer implements ApplicationRunner {
         config.setDailyLimit(1);
         config.setIsFixed(true);
         config.setEnabled(true);
-        config.setDescription("신규 가입 시 첫 체중 리워드 호출에서 1회 자동 지급");
+        config.setDescription("신규 가입 즉시 1회 자동 지급");
         rewardConfigRepository.save(config);
 
         log.info("[RewardConfig.SIGNUP_BONUS] 초기 시딩 완료 (amount=3, enabled=true)");

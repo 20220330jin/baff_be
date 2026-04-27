@@ -38,6 +38,14 @@ public class RewardHistory extends BaseEntity {
     /** 에러 메시지 (실패 시) */
     private String errorMessage;
 
+    /** 토스 프로모션 코드 (FIRST_ATTENDANCE_BONUS 등 토스포인트 직접 지급 시 기록). */
+    @Column(length = 100)
+    private String promotionKey;
+
+    /** 토스 프로모션 트랜잭션 ID (지급 추적/조회용). */
+    @Column(length = 100)
+    private String promotionTransactionId;
+
     public RewardHistory(Long userId, RewardType rewardType, Integer amount,
                          RewardStatus status, Long referenceId) {
         this.userId = userId;

@@ -127,6 +127,9 @@ public class AttendanceServiceImpl implements AttendanceService {
         // 이번주 미션 진행도 증가
         missionService.incrementMissionProgress(userId, MissionType.WEEKLY_ATTENDANCE);
 
+        // 첫 출석 프로모션 (토스포인트 직접 지급, 1회) — 내부 dedup, 예외 swallow
+        rewardService.claimFirstAttendanceBonus(userId, socialId);
+
         log.info("출석 완료: userId={}, streak={}, earned={}g, bonus={}g",
                 userId, newStreakCount, earnedGrams, streakBonusGrams);
 
