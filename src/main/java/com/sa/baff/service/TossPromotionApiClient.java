@@ -23,6 +23,11 @@ public class TossPromotionApiClient {
         this.tossWebClient = tossWebClient;
     }
 
+    /** tossWebClient 빈 존재 여부 (toss.api.url 미설정 시 false). */
+    public boolean isAvailable() {
+        return tossWebClient != null;
+    }
+
     /**
      * 토스 프로모션 리워드 지급 (2단계: Key 발급 → 리워드 실행)
      * @return 발급된 key

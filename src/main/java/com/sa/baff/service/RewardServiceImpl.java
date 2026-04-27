@@ -5,7 +5,6 @@ import com.sa.baff.domain.*;
 import com.sa.baff.model.dto.RewardDto;
 import com.sa.baff.repository.*;
 import com.sa.baff.service.account.AccountLinkedUserResolver;
-import com.sa.baff.service.reward.TossPromotionApiClient;
 import com.sa.baff.util.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
