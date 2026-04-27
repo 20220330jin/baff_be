@@ -263,6 +263,14 @@ public class UserServiceImpl implements UserService {
                             UserB newUser = new UserB(email, null, randomImageUrl, socialId, "toss", "TOSS");
                             nicknameGeneratorService.generateUniqueNicknameAndSave(newUser);
                             log.info("New Toss user created: {}", socialId);
+
+                            // 신규 가입 즉시 SIGNUP_BONUS 지급 (RewardConfig 활성화 + dedup 내부 처리, 예외 swallow)
+                            try {
+                                rewardService.claimSignupBonus(newUser.getId(), newUser);
+                            } catch (Exception e) {
+                                log.warn("[SIGNUP_BONUS] Toss 신규 가입 지급 실패 (userId={}): {}",
+                                        newUser.getId(), e.getMessage());
+                            }
                             return newUser;
                         }));
 
