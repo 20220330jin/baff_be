@@ -69,6 +69,9 @@ public class AdMetricRestController {
             AdMetricDailyEntry daily = dailyRepository.findByMetricDate(date).orElse(null);
             List<AdMetricBannerEntry> banners = bannerRepository.findByMetricDate(date);
             List<AdMetricImageEntry> images = imageRepository.findByMetricDate(date);
+            if (daily != null) {
+                applyPositionSumsFromLists(daily, banners, images);
+            }
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("daily", daily);
             body.put("banners", banners);
@@ -76,9 +79,13 @@ public class AdMetricRestController {
             return ResponseEntity.ok(body);
         }
         if (from != null && to != null) {
-            return ResponseEntity.ok(
-                    dailyRepository.findByMetricDateBetweenOrderByMetricDateDesc(from, to)
-            );
+            List<AdMetricDailyEntry> rows =
+                    dailyRepository.findByMetricDateBetweenOrderByMetricDateDesc(from, to);
+            // 위치별 row 합산을 daily의 B/I 합산 필드에 자동 채움 (응답 전용, persist X)
+            for (AdMetricDailyEntry row : rows) {
+                applyPositionSums(row);
+            }
+            return ResponseEntity.ok(rows);
         }
         return ResponseEntity.badRequest().body(Map.of(
                 "message", "date 또는 from/to 파라미터를 지정해주세요"
@@ -283,6 +290,81 @@ public class AdMetricRestController {
         marker.setActorAdminId(resolveAdminId(adminSocialId));
         deployMarkerRepository.save(marker);
         return ResponseEntity.ok(marker);
+    }
+
+    // ==================== 위치별 합산 응답 보정 ====================
+
+    /**
+     * 응답 직전에 daily의 B/I 합산 필드를 위치별 row 합으로 채움.
+     * persist 호출 X, 단순 메모리 setter (Jackson 직렬화 직전).
+     */
+    private void applyPositionSums(AdMetricDailyEntry daily) {
+        List<AdMetricBannerEntry> banners = bannerRepository.findByMetricDate(daily.getMetricDate());
+        List<AdMetricImageEntry> images = imageRepository.findByMetricDate(daily.getMetricDate());
+        applyPositionSumsFromLists(daily, banners, images);
+    }
+
+    private void applyPositionSumsFromLists(AdMetricDailyEntry daily,
+                                            List<AdMetricBannerEntry> banners,
+                                            List<AdMetricImageEntry> images) {
+        // B 합산 — 위치별 입력 있으면 그 합으로, 운영자가 daily에 직접 입력한 값이 있으면 우선 보존
+        if (!banners.isEmpty()) {
+            int impSum = 0, revSum = 0;
+            double weightedCtrNum = 0, weightedCtrDen = 0;
+            double weightedEcpmNum = 0, weightedEcpmDen = 0;
+            for (AdMetricBannerEntry b : banners) {
+                int imp = b.getImpression() == null ? 0 : b.getImpression();
+                int rev = b.getRevenue() == null ? 0 : b.getRevenue();
+                impSum += imp;
+                revSum += rev;
+                if (imp > 0 && b.getCtrReported() != null) {
+                    weightedCtrNum += b.getCtrReported().doubleValue() * imp;
+                    weightedCtrDen += imp;
+                }
+                if (imp > 0 && b.getEcpmReported() != null) {
+                    weightedEcpmNum += b.getEcpmReported() * imp;
+                    weightedEcpmDen += imp;
+                }
+            }
+            if (daily.getImpressionBTotal() == null) daily.setImpressionBTotal(impSum);
+            if (daily.getTossRevenueBTotal() == null) daily.setTossRevenueBTotal(revSum);
+            if (daily.getCtrBTotalReported() == null && weightedCtrDen > 0) {
+                daily.setCtrBTotalReported(java.math.BigDecimal.valueOf(weightedCtrNum / weightedCtrDen)
+                        .setScale(2, java.math.RoundingMode.HALF_UP));
+            }
+            if (daily.getEcpmBTotalReported() == null && weightedEcpmDen > 0) {
+                daily.setEcpmBTotalReported((int) Math.round(weightedEcpmNum / weightedEcpmDen));
+            }
+        }
+        // I 합산 — 동일 로직
+        if (!images.isEmpty()) {
+            int impSum = 0, revSum = 0;
+            double weightedCtrNum = 0, weightedCtrDen = 0;
+            double weightedEcpmNum = 0, weightedEcpmDen = 0;
+            for (AdMetricImageEntry i : images) {
+                int imp = i.getImpression() == null ? 0 : i.getImpression();
+                int rev = i.getRevenue() == null ? 0 : i.getRevenue();
+                impSum += imp;
+                revSum += rev;
+                if (imp > 0 && i.getCtrReported() != null) {
+                    weightedCtrNum += i.getCtrReported().doubleValue() * imp;
+                    weightedCtrDen += imp;
+                }
+                if (imp > 0 && i.getEcpmReported() != null) {
+                    weightedEcpmNum += i.getEcpmReported() * imp;
+                    weightedEcpmDen += imp;
+                }
+            }
+            if (daily.getImpressionI() == null) daily.setImpressionI(impSum);
+            if (daily.getTossRevenueI() == null) daily.setTossRevenueI(revSum);
+            if (daily.getCtrIReported() == null && weightedCtrDen > 0) {
+                daily.setCtrIReported(java.math.BigDecimal.valueOf(weightedCtrNum / weightedCtrDen)
+                        .setScale(2, java.math.RoundingMode.HALF_UP));
+            }
+            if (daily.getEcpmIReported() == null && weightedEcpmDen > 0) {
+                daily.setEcpmIReported((int) Math.round(weightedEcpmNum / weightedEcpmDen));
+            }
+        }
     }
 
     // ==================== 헬퍼 ====================
