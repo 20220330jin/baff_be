@@ -18,6 +18,7 @@ import jakarta.transaction.Transactional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -131,7 +132,20 @@ public class AdMetricRestController {
 
         applyDailyRequest(daily, req);
         daily.setActorAdminId(actorAdminId);
-        dailyRepository.save(daily);
+
+        // race-safe upsert: UNIQUE(metric_date) 위반(=동시 INSERT) 발생 시 기존 row 다시 조회해 update.
+        // GlobalExceptionHandler가 DataIntegrityViolationException를 일괄 409 "이미 처리된 요청이에요"로 변환하므로
+        // 본 컨트롤러에서 명시적으로 catch하여 운영자 수정 의도를 보존한다.
+        try {
+            dailyRepository.save(daily);
+        } catch (DataIntegrityViolationException dup) {
+            AdMetricDailyEntry reloaded = dailyRepository.findByMetricDate(date)
+                    .orElseThrow(() -> dup);
+            applyDailyRequest(reloaded, req);
+            reloaded.setActorAdminId(actorAdminId);
+            dailyRepository.save(reloaded);
+            daily = reloaded;
+        }
 
         // 위치별 — 들어온 키만 upsert. 미수신 위치는 건드리지 않음.
         upsertBanners(date, req.getBanners(), actorAdminId);
@@ -174,7 +188,20 @@ public class AdMetricRestController {
             if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
             if (pr.getAdIdSnapshot() != null) row.setAdIdSnapshot(pr.getAdIdSnapshot());
             row.setActorAdminId(actorAdminId);
-            bannerRepository.save(row);
+            try {
+                bannerRepository.save(row);
+            } catch (DataIntegrityViolationException dup) {
+                AdMetricBannerEntry reloaded = bannerRepository.findByMetricDate(date).stream()
+                        .filter(b -> b.getAdPositionCode().equals(pr.getAdPositionCode()))
+                        .findFirst().orElseThrow(() -> dup);
+                if (pr.getImpression() != null) reloaded.setImpression(pr.getImpression());
+                if (pr.getCtrReported() != null) reloaded.setCtrReported(pr.getCtrReported());
+                if (pr.getEcpmReported() != null) reloaded.setEcpmReported(pr.getEcpmReported());
+                if (pr.getRevenue() != null) reloaded.setRevenue(pr.getRevenue());
+                if (pr.getAdIdSnapshot() != null) reloaded.setAdIdSnapshot(pr.getAdIdSnapshot());
+                reloaded.setActorAdminId(actorAdminId);
+                bannerRepository.save(reloaded);
+            }
         }
     }
 
@@ -198,7 +225,20 @@ public class AdMetricRestController {
             if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
             if (pr.getAdIdSnapshot() != null) row.setAdIdSnapshot(pr.getAdIdSnapshot());
             row.setActorAdminId(actorAdminId);
-            imageRepository.save(row);
+            try {
+                imageRepository.save(row);
+            } catch (DataIntegrityViolationException dup) {
+                AdMetricImageEntry reloaded = imageRepository.findByMetricDate(date).stream()
+                        .filter(b -> b.getAdPositionCode().equals(pr.getAdPositionCode()))
+                        .findFirst().orElseThrow(() -> dup);
+                if (pr.getImpression() != null) reloaded.setImpression(pr.getImpression());
+                if (pr.getCtrReported() != null) reloaded.setCtrReported(pr.getCtrReported());
+                if (pr.getEcpmReported() != null) reloaded.setEcpmReported(pr.getEcpmReported());
+                if (pr.getRevenue() != null) reloaded.setRevenue(pr.getRevenue());
+                if (pr.getAdIdSnapshot() != null) reloaded.setAdIdSnapshot(pr.getAdIdSnapshot());
+                reloaded.setActorAdminId(actorAdminId);
+                imageRepository.save(reloaded);
+            }
         }
     }
 
