@@ -2,12 +2,14 @@ package com.sa.baff.api;
 
 import com.sa.baff.domain.AdMetricBannerEntry;
 import com.sa.baff.domain.AdMetricDailyEntry;
+import com.sa.baff.domain.AdMetricDeployMarker;
 import com.sa.baff.domain.AdMetricEntryRevisionLog;
 import com.sa.baff.domain.AdMetricImageEntry;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.AdMetricAnalyticsDto;
 import com.sa.baff.repository.AdMetricBannerEntryRepository;
 import com.sa.baff.repository.AdMetricDailyEntryRepository;
+import com.sa.baff.repository.AdMetricDeployMarkerRepository;
 import com.sa.baff.repository.AdMetricEntryRevisionLogRepository;
 import com.sa.baff.repository.AdMetricImageEntryRepository;
 import com.sa.baff.repository.UserRepository;
@@ -50,6 +52,7 @@ public class AdMetricRestController {
     private final AdMetricEntryRevisionLogRepository revisionLogRepository;
     private final AdMetricBannerEntryRepository bannerRepository;
     private final AdMetricImageEntryRepository imageRepository;
+    private final AdMetricDeployMarkerRepository deployMarkerRepository;
     private final UserRepository userRepository;
     private final AdMetricAnalyticsService analyticsService;
 
@@ -214,6 +217,34 @@ public class AdMetricRestController {
         return ResponseEntity.ok(analyticsService.getDailyTable(from, to));
     }
 
+    // ==================== 배포 마커 ====================
+
+    @GetMapping("/deploys")
+    public ResponseEntity<List<AdMetricDeployMarker>> listDeploys() {
+        return ResponseEntity.ok(deployMarkerRepository.findAllByOrderByMetricDateAsc());
+    }
+
+    @PostMapping("/deploys")
+    @Transactional
+    public ResponseEntity<?> createDeploy(
+            @RequestBody DeployMarkerRequest req,
+            @AuthenticationPrincipal String adminSocialId) {
+        if (req.getMetricDate() == null
+                || req.getDeployVersion() == null
+                || req.getDeployVersion().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "message", "metricDate, deployVersion 필수"
+            ));
+        }
+        AdMetricDeployMarker marker = new AdMetricDeployMarker();
+        marker.setMetricDate(req.getMetricDate());
+        marker.setDeployVersion(req.getDeployVersion());
+        marker.setDeployNote(req.getDeployNote());
+        marker.setActorAdminId(resolveAdminId(adminSocialId));
+        deployMarkerRepository.save(marker);
+        return ResponseEntity.ok(marker);
+    }
+
     // ==================== 헬퍼 ====================
 
     private boolean isAfterDPlus7(LocalDate metricDate) {
@@ -331,6 +362,13 @@ public class AdMetricRestController {
 
         // D+7 이후 수정 시 NOT NULL
         private String reason;
+    }
+
+    @Getter @Setter
+    public static class DeployMarkerRequest {
+        private LocalDate metricDate;
+        private String deployVersion;
+        private String deployNote;
     }
 
     @Getter @Setter
