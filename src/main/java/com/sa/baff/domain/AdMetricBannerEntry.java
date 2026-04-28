@@ -43,6 +43,10 @@ public class AdMetricBannerEntry extends BaseEntity {
 
     private Integer revenue;
 
+    /** 해당일 매핑된 광고 ID (토스 콘솔 ID별 집계와 매칭용) */
+    @Column(name = "ad_id_snapshot", length = 100)
+    private String adIdSnapshot;
+
     @Column(name = "actor_admin_id")
     private Long actorAdminId;
 }

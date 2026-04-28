@@ -169,6 +169,7 @@ public class AdMetricRestController {
             if (pr.getCtrReported() != null) row.setCtrReported(pr.getCtrReported());
             if (pr.getEcpmReported() != null) row.setEcpmReported(pr.getEcpmReported());
             if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
+            if (pr.getAdIdSnapshot() != null) row.setAdIdSnapshot(pr.getAdIdSnapshot());
             row.setActorAdminId(actorAdminId);
             bannerRepository.save(row);
         }
@@ -192,6 +193,7 @@ public class AdMetricRestController {
             if (pr.getCtrReported() != null) row.setCtrReported(pr.getCtrReported());
             if (pr.getEcpmReported() != null) row.setEcpmReported(pr.getEcpmReported());
             if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
+            if (pr.getAdIdSnapshot() != null) row.setAdIdSnapshot(pr.getAdIdSnapshot());
             row.setActorAdminId(actorAdminId);
             imageRepository.save(row);
         }
@@ -247,6 +249,8 @@ public class AdMetricRestController {
 
         if (r.getNewUsersReported() != null) e.setNewUsersReported(r.getNewUsersReported());
         if (r.getTotalUsersReported() != null) e.setTotalUsersReported(r.getTotalUsersReported());
+        if (r.getRetentionD1New() != null) e.setRetentionD1New(r.getRetentionD1New());
+        if (r.getRetentionD1Total() != null) e.setRetentionD1Total(r.getRetentionD1Total());
     }
 
     private Map<String, Map<String, Object>> computeDiff(AdMetricDailyEntry b, AdMetricFullRequest r) {
@@ -273,6 +277,8 @@ public class AdMetricRestController {
 
         addIfChanged(changed, "newUsersReported", b.getNewUsersReported(), r.getNewUsersReported());
         addIfChanged(changed, "totalUsersReported", b.getTotalUsersReported(), r.getTotalUsersReported());
+        addIfChanged(changed, "retentionD1New", b.getRetentionD1New(), r.getRetentionD1New());
+        addIfChanged(changed, "retentionD1Total", b.getRetentionD1Total(), r.getRetentionD1Total());
         return changed;
     }
 
@@ -313,9 +319,11 @@ public class AdMetricRestController {
         private Integer impressionBTotal;
         private Integer impressionI;
 
-        // 토스 콘솔 reported — 유저
+        // 토스 콘솔 reported — 유저 + 리텐션
         private Integer newUsersReported;
         private Integer totalUsersReported;
+        private BigDecimal retentionD1New;
+        private BigDecimal retentionD1Total;
 
         // 위치별 분해 (B + I)
         private List<PositionEntryRequest> banners;
@@ -332,5 +340,7 @@ public class AdMetricRestController {
         private BigDecimal ctrReported;
         private Integer ecpmReported;
         private Integer revenue;
+        /** 해당일 매핑된 광고 ID — 위치별 row는 AdPositionConfig 자동, OTHER는 운영자 직접 입력 */
+        private String adIdSnapshot;
     }
 }

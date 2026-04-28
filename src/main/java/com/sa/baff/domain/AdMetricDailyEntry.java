@@ -97,6 +97,12 @@ public class AdMetricDailyEntry extends BaseEntity {
     @Column(name = "total_users_reported")
     private Integer totalUsersReported;
 
+    @Column(name = "retention_d1_new", precision = 5, scale = 2)
+    private BigDecimal retentionD1New;
+
+    @Column(name = "retention_d1_total", precision = 5, scale = 2)
+    private BigDecimal retentionD1Total;
+
     // ===== 토스 외 자동 미수집 =====
     @Column(name = "new_inflow_toss")
     private Integer newInflowToss;
