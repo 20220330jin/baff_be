@@ -90,6 +90,13 @@ public class AdMetricDailyEntry extends BaseEntity {
     @Column(name = "impression_i")
     private Integer impressionI;
 
+    // ===== 토스 콘솔 reported — 유저 (나만그래 newUsers/totalUsers 패턴) =====
+    @Column(name = "new_users_reported")
+    private Integer newUsersReported;
+
+    @Column(name = "total_users_reported")
+    private Integer totalUsersReported;
+
     // ===== 토스 외 자동 미수집 =====
     @Column(name = "new_inflow_toss")
     private Integer newInflowToss;

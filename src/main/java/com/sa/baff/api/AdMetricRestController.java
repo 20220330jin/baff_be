@@ -12,7 +12,6 @@ import com.sa.baff.repository.AdMetricEntryRevisionLogRepository;
 import com.sa.baff.repository.AdMetricImageEntryRepository;
 import com.sa.baff.repository.UserRepository;
 import com.sa.baff.service.AdMetricAnalyticsService;
-import com.sa.baff.util.AdWatchLocation;
 import jakarta.transaction.Transactional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -155,11 +154,11 @@ public class AdMetricRestController {
     private void upsertBanners(LocalDate date, List<PositionEntryRequest> reqList, Long actorAdminId) {
         if (reqList == null) return;
         List<AdMetricBannerEntry> existing = bannerRepository.findByMetricDate(date);
-        Map<AdWatchLocation, AdMetricBannerEntry> byPos = new HashMap<>();
+        Map<String, AdMetricBannerEntry> byPos = new HashMap<>();
         for (AdMetricBannerEntry e : existing) byPos.put(e.getAdPositionCode(), e);
 
         for (PositionEntryRequest pr : reqList) {
-            if (pr.getAdPositionCode() == null) continue;
+            if (pr.getAdPositionCode() == null || pr.getAdPositionCode().isBlank()) continue;
             AdMetricBannerEntry row = byPos.get(pr.getAdPositionCode());
             if (row == null) {
                 row = new AdMetricBannerEntry();
@@ -178,11 +177,11 @@ public class AdMetricRestController {
     private void upsertImages(LocalDate date, List<PositionEntryRequest> reqList, Long actorAdminId) {
         if (reqList == null) return;
         List<AdMetricImageEntry> existing = imageRepository.findByMetricDate(date);
-        Map<AdWatchLocation, AdMetricImageEntry> byPos = new HashMap<>();
+        Map<String, AdMetricImageEntry> byPos = new HashMap<>();
         for (AdMetricImageEntry e : existing) byPos.put(e.getAdPositionCode(), e);
 
         for (PositionEntryRequest pr : reqList) {
-            if (pr.getAdPositionCode() == null) continue;
+            if (pr.getAdPositionCode() == null || pr.getAdPositionCode().isBlank()) continue;
             AdMetricImageEntry row = byPos.get(pr.getAdPositionCode());
             if (row == null) {
                 row = new AdMetricImageEntry();
@@ -245,6 +244,9 @@ public class AdMetricRestController {
         if (r.getImpressionFReported() != null) e.setImpressionFReported(r.getImpressionFReported());
         if (r.getImpressionBTotal() != null) e.setImpressionBTotal(r.getImpressionBTotal());
         if (r.getImpressionI() != null) e.setImpressionI(r.getImpressionI());
+
+        if (r.getNewUsersReported() != null) e.setNewUsersReported(r.getNewUsersReported());
+        if (r.getTotalUsersReported() != null) e.setTotalUsersReported(r.getTotalUsersReported());
     }
 
     private Map<String, Map<String, Object>> computeDiff(AdMetricDailyEntry b, AdMetricFullRequest r) {
@@ -268,6 +270,9 @@ public class AdMetricRestController {
         addIfChanged(changed, "impressionFReported", b.getImpressionFReported(), r.getImpressionFReported());
         addIfChanged(changed, "impressionBTotal", b.getImpressionBTotal(), r.getImpressionBTotal());
         addIfChanged(changed, "impressionI", b.getImpressionI(), r.getImpressionI());
+
+        addIfChanged(changed, "newUsersReported", b.getNewUsersReported(), r.getNewUsersReported());
+        addIfChanged(changed, "totalUsersReported", b.getTotalUsersReported(), r.getTotalUsersReported());
         return changed;
     }
 
@@ -308,6 +313,10 @@ public class AdMetricRestController {
         private Integer impressionBTotal;
         private Integer impressionI;
 
+        // 토스 콘솔 reported — 유저
+        private Integer newUsersReported;
+        private Integer totalUsersReported;
+
         // 위치별 분해 (B + I)
         private List<PositionEntryRequest> banners;
         private List<PositionEntryRequest> images;
@@ -318,7 +327,7 @@ public class AdMetricRestController {
 
     @Getter @Setter
     public static class PositionEntryRequest {
-        private AdWatchLocation adPositionCode;
+        private String adPositionCode;
         private Integer impression;
         private BigDecimal ctrReported;
         private Integer ecpmReported;

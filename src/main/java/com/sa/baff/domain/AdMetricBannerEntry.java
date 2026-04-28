@@ -1,6 +1,5 @@
 package com.sa.baff.domain;
 
-import com.sa.baff.util.AdWatchLocation;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,9 +29,9 @@ public class AdMetricBannerEntry extends BaseEntity {
     @Column(name = "metric_date", nullable = false)
     private LocalDate metricDate;
 
-    @Enumerated(EnumType.STRING)
+    /** AdWatchLocation enum 값 또는 'OTHER' (미분리). varchar 자유 입력. */
     @Column(name = "ad_position_code", nullable = false, length = 64)
-    private AdWatchLocation adPositionCode;
+    private String adPositionCode;
 
     private Integer impression;
 
