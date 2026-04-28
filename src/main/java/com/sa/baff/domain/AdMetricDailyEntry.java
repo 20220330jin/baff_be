@@ -60,6 +60,19 @@ public class AdMetricDailyEntry extends BaseEntity {
     @Column(name = "ecpm_i_reported")
     private Integer ecpmIReported;
 
+    // ===== 토스 콘솔 reported — 시청률 (%, 0~100) =====
+    @Column(name = "ctr_r_reported", precision = 5, scale = 2)
+    private BigDecimal ctrRReported;
+
+    @Column(name = "ctr_f_reported", precision = 5, scale = 2)
+    private BigDecimal ctrFReported;
+
+    @Column(name = "ctr_b_total_reported", precision = 5, scale = 2)
+    private BigDecimal ctrBTotalReported;
+
+    @Column(name = "ctr_i_reported", precision = 5, scale = 2)
+    private BigDecimal ctrIReported;
+
     // ===== 토스 콘솔 reported — 노출 =====
     /** R 노출 reported — 검증용 (truth는 DB observed) */
     @Column(name = "impression_r_reported")

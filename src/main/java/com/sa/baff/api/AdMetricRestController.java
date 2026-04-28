@@ -1,13 +1,18 @@
 package com.sa.baff.api;
 
+import com.sa.baff.domain.AdMetricBannerEntry;
 import com.sa.baff.domain.AdMetricDailyEntry;
 import com.sa.baff.domain.AdMetricEntryRevisionLog;
+import com.sa.baff.domain.AdMetricImageEntry;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.AdMetricAnalyticsDto;
+import com.sa.baff.repository.AdMetricBannerEntryRepository;
 import com.sa.baff.repository.AdMetricDailyEntryRepository;
 import com.sa.baff.repository.AdMetricEntryRevisionLogRepository;
+import com.sa.baff.repository.AdMetricImageEntryRepository;
 import com.sa.baff.repository.UserRepository;
 import com.sa.baff.service.AdMetricAnalyticsService;
+import com.sa.baff.util.AdWatchLocation;
 import jakarta.transaction.Transactional;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -20,26 +25,19 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * P0 광고전략 — 일자별 토스 콘솔 reported 수치 입력/조회 API.
+ * 광고전략 — 일자별 토스 콘솔 reported 수치 + 위치별 분해 입력/조회 API.
  *
  * Spring Security가 /api/admin/** 경로를 ADMIN 역할로 보호.
- *
- * 엔드포인트:
- *  - GET    /api/admin/ad-metrics/daily?date=YYYY-MM-DD            단건 조회
- *  - GET    /api/admin/ad-metrics/daily?from=...&to=...            범위 조회 (분석 탭 D-7)
- *  - POST   /api/admin/ad-metrics/daily                            신규 생성 (해당 일자 row 없을 때)
- *  - PUT    /api/admin/ad-metrics/daily/{date}                     D+7 미만 수정 (revision log 미적재)
- *  - PATCH  /api/admin/ad-metrics/daily/{date}                     D+7 이후 수정 (reason 필수, revision log 적재)
- *  - GET    /api/admin/ad-metrics/daily/{date}/revisions           특정 일자 변경 이력
- *
- * D+7 기준일: row.metricDate 기준. 즉 LocalDate.now() - metricDate >= 7d 이면 D+7 이후.
+ * 나만그래 패턴 정합: R / F 일별 + B 위치별 + I 위치별 분리 입력.
  */
 @RestController
 @RequestMapping("/api/admin/ad-metrics")
@@ -51,10 +49,12 @@ public class AdMetricRestController {
 
     private final AdMetricDailyEntryRepository dailyRepository;
     private final AdMetricEntryRevisionLogRepository revisionLogRepository;
+    private final AdMetricBannerEntryRepository bannerRepository;
+    private final AdMetricImageEntryRepository imageRepository;
     private final UserRepository userRepository;
     private final AdMetricAnalyticsService analyticsService;
 
-    // ==================== 조회 ====================
+    // ==================== 일자별 단건 조회 ====================
 
     @GetMapping("/daily")
     public ResponseEntity<?> get(
@@ -63,14 +63,19 @@ public class AdMetricRestController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
         if (date != null) {
-            return ResponseEntity.ok(
-                    dailyRepository.findByMetricDate(date).orElse(null)
-            );
+            AdMetricDailyEntry daily = dailyRepository.findByMetricDate(date).orElse(null);
+            List<AdMetricBannerEntry> banners = bannerRepository.findByMetricDate(date);
+            List<AdMetricImageEntry> images = imageRepository.findByMetricDate(date);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("daily", daily);
+            body.put("banners", banners);
+            body.put("images", images);
+            return ResponseEntity.ok(body);
         }
         if (from != null && to != null) {
-            List<AdMetricDailyEntry> rows =
-                    dailyRepository.findByMetricDateBetweenOrderByMetricDateDesc(from, to);
-            return ResponseEntity.ok(rows);
+            return ResponseEntity.ok(
+                    dailyRepository.findByMetricDateBetweenOrderByMetricDateDesc(from, to)
+            );
         }
         return ResponseEntity.badRequest().body(Map.of(
                 "message", "date 또는 from/to 파라미터를 지정해주세요"
@@ -81,98 +86,56 @@ public class AdMetricRestController {
     public ResponseEntity<List<AdMetricEntryRevisionLog>> getRevisions(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(
-                revisionLogRepository.findByTableNameAndRowMetricDateOrderByIdDesc(
-                        TABLE_NAME_DAILY, date)
+                revisionLogRepository.findByTableNameAndRowMetricDateOrderByIdDesc(TABLE_NAME_DAILY, date)
         );
     }
 
-    // ==================== 신규 생성 ====================
+    // ==================== upsert (POST/PUT/PATCH 통합) ====================
 
+    /**
+     * 통합 저장 엔드포인트 — daily 1건 + banners N건 + images N건 일괄 upsert.
+     * D+7 이후: reason NOT NULL + revision log 적재.
+     */
     @PostMapping("/daily")
     @Transactional
-    public ResponseEntity<?> create(
-            @RequestBody AdMetricDailyRequest req,
+    public ResponseEntity<?> upsert(
+            @RequestBody AdMetricFullRequest req,
             @AuthenticationPrincipal String adminSocialId) {
 
         if (req.getMetricDate() == null) {
             return ResponseEntity.badRequest().body(Map.of("message", "metricDate 필수"));
         }
-        if (dailyRepository.findByMetricDate(req.getMetricDate()).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "message", "해당 일자 입력값이 이미 존재합니다. PUT 또는 PATCH로 수정해주세요"
-            ));
-        }
-
+        LocalDate date = req.getMetricDate();
+        boolean afterDPlus7 = isAfterDPlus7(date);
         Long actorAdminId = resolveAdminId(adminSocialId);
 
-        AdMetricDailyEntry entry = new AdMetricDailyEntry();
-        entry.setMetricDate(req.getMetricDate());
-        applyRequest(entry, req);
-        entry.setActorAdminId(actorAdminId);
+        Optional<AdMetricDailyEntry> existingOpt = dailyRepository.findByMetricDate(date);
+        AdMetricDailyEntry daily = existingOpt.orElseGet(() -> {
+            AdMetricDailyEntry e = new AdMetricDailyEntry();
+            e.setMetricDate(date);
+            return e;
+        });
 
-        dailyRepository.save(entry);
-        return ResponseEntity.ok(entry);
-    }
-
-    // ==================== D+7 미만 수정 ====================
-
-    @PutMapping("/daily/{date}")
-    @Transactional
-    public ResponseEntity<?> update(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestBody AdMetricDailyRequest req,
-            @AuthenticationPrincipal String adminSocialId) {
-
-        AdMetricDailyEntry existing = dailyRepository.findByMetricDate(date).orElse(null);
-        if (existing == null) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "message", "입력값 없음. POST로 생성해주세요: " + date
-            ));
-        }
-
-        if (isAfterDPlus7(date)) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "message", "D+7 이후 수정은 PATCH + reason 필수"
-            ));
-        }
-
-        applyRequest(existing, req);
-        existing.setActorAdminId(resolveAdminId(adminSocialId));
-        dailyRepository.save(existing);
-        return ResponseEntity.ok(existing);
-    }
-
-    // ==================== D+7 이후 수정 (revision log 적재) ====================
-
-    @PatchMapping("/daily/{date}")
-    @Transactional
-    public ResponseEntity<?> patch(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestBody AdMetricDailyPatchRequest req,
-            @AuthenticationPrincipal String adminSocialId) {
-
-        AdMetricDailyEntry existing = dailyRepository.findByMetricDate(date).orElse(null);
-        if (existing == null) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "message", "입력값 없음: " + date
-            ));
-        }
-
-        boolean afterDPlus7 = isAfterDPlus7(date);
-
-        if (afterDPlus7 && (req.getReason() == null || req.getReason().isBlank())) {
+        if (existingOpt.isPresent() && afterDPlus7
+                && (req.getReason() == null || req.getReason().isBlank())) {
             return ResponseEntity.badRequest().body(Map.of(
                     "message", "D+7 이후 수정은 사유(reason) 필수"
             ));
         }
 
-        Map<String, Map<String, Object>> changed = computeDiff(existing, req);
-        applyRequest(existing, req);
-        Long actorAdminId = resolveAdminId(adminSocialId);
-        existing.setActorAdminId(actorAdminId);
-        dailyRepository.save(existing);
+        Map<String, Map<String, Object>> changed = existingOpt.isPresent()
+                ? computeDiff(daily, req)
+                : new LinkedHashMap<>();
 
-        if (afterDPlus7 && !changed.isEmpty()) {
+        applyDailyRequest(daily, req);
+        daily.setActorAdminId(actorAdminId);
+        dailyRepository.save(daily);
+
+        // 위치별 — 들어온 키만 upsert. 미수신 위치는 건드리지 않음.
+        upsertBanners(date, req.getBanners(), actorAdminId);
+        upsertImages(date, req.getImages(), actorAdminId);
+
+        if (existingOpt.isPresent() && afterDPlus7 && !changed.isEmpty()) {
             AdMetricEntryRevisionLog log = new AdMetricEntryRevisionLog();
             log.setTableName(TABLE_NAME_DAILY);
             log.setRowMetricDate(date);
@@ -183,19 +146,66 @@ public class AdMetricRestController {
             revisionLogRepository.save(log);
         }
 
-        return ResponseEntity.ok(existing);
+        return ResponseEntity.ok(Map.of(
+                "message", existingOpt.isPresent() ? "수정 완료" : "신규 저장 완료",
+                "afterDPlus7", afterDPlus7
+        ));
+    }
+
+    private void upsertBanners(LocalDate date, List<PositionEntryRequest> reqList, Long actorAdminId) {
+        if (reqList == null) return;
+        List<AdMetricBannerEntry> existing = bannerRepository.findByMetricDate(date);
+        Map<AdWatchLocation, AdMetricBannerEntry> byPos = new HashMap<>();
+        for (AdMetricBannerEntry e : existing) byPos.put(e.getAdPositionCode(), e);
+
+        for (PositionEntryRequest pr : reqList) {
+            if (pr.getAdPositionCode() == null) continue;
+            AdMetricBannerEntry row = byPos.get(pr.getAdPositionCode());
+            if (row == null) {
+                row = new AdMetricBannerEntry();
+                row.setMetricDate(date);
+                row.setAdPositionCode(pr.getAdPositionCode());
+            }
+            if (pr.getImpression() != null) row.setImpression(pr.getImpression());
+            if (pr.getCtrReported() != null) row.setCtrReported(pr.getCtrReported());
+            if (pr.getEcpmReported() != null) row.setEcpmReported(pr.getEcpmReported());
+            if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
+            row.setActorAdminId(actorAdminId);
+            bannerRepository.save(row);
+        }
+    }
+
+    private void upsertImages(LocalDate date, List<PositionEntryRequest> reqList, Long actorAdminId) {
+        if (reqList == null) return;
+        List<AdMetricImageEntry> existing = imageRepository.findByMetricDate(date);
+        Map<AdWatchLocation, AdMetricImageEntry> byPos = new HashMap<>();
+        for (AdMetricImageEntry e : existing) byPos.put(e.getAdPositionCode(), e);
+
+        for (PositionEntryRequest pr : reqList) {
+            if (pr.getAdPositionCode() == null) continue;
+            AdMetricImageEntry row = byPos.get(pr.getAdPositionCode());
+            if (row == null) {
+                row = new AdMetricImageEntry();
+                row.setMetricDate(date);
+                row.setAdPositionCode(pr.getAdPositionCode());
+            }
+            if (pr.getImpression() != null) row.setImpression(pr.getImpression());
+            if (pr.getCtrReported() != null) row.setCtrReported(pr.getCtrReported());
+            if (pr.getEcpmReported() != null) row.setEcpmReported(pr.getEcpmReported());
+            if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
+            row.setActorAdminId(actorAdminId);
+            imageRepository.save(row);
+        }
     }
 
     // ==================== 분석 (집계) ====================
 
-    /** 단일 일자 KPI 카드 (분석 탭 + AI 보고용 자동 채움) */
     @GetMapping("/kpi")
     public ResponseEntity<AdMetricAnalyticsDto.Kpi> getKpi(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(analyticsService.getKpi(date));
     }
 
-    /** 일별 KPI 표 (분석 탭 D-7) */
     @GetMapping("/daily-table")
     public ResponseEntity<List<AdMetricAnalyticsDto.DailyTableRow>> getDailyTable(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -206,8 +216,7 @@ public class AdMetricRestController {
     // ==================== 헬퍼 ====================
 
     private boolean isAfterDPlus7(LocalDate metricDate) {
-        long days = ChronoUnit.DAYS.between(metricDate, LocalDate.now());
-        return days >= D_PLUS_7_THRESHOLD_DAYS;
+        return ChronoUnit.DAYS.between(metricDate, LocalDate.now()) >= D_PLUS_7_THRESHOLD_DAYS;
     }
 
     private Long resolveAdminId(String adminSocialId) {
@@ -216,56 +225,49 @@ public class AdMetricRestController {
         return admin.getId();
     }
 
-    /**
-     * request의 non-null 필드만 entry에 반영 (PATCH 시 부분 업데이트 허용).
-     * POST/PUT에서도 동일하게 사용 — null인 필드는 건드리지 않음.
-     * 명시적으로 null로 만들고 싶으면 별도 엔드포인트나 sentinel 값 도입 필요 (P0 범위 밖).
-     */
-    private void applyRequest(AdMetricDailyEntry entry, AdMetricDailyRequest req) {
-        if (req.getTossRevenueR() != null) entry.setTossRevenueR(req.getTossRevenueR());
-        if (req.getTossRevenueF() != null) entry.setTossRevenueF(req.getTossRevenueF());
-        if (req.getTossRevenueBTotal() != null) entry.setTossRevenueBTotal(req.getTossRevenueBTotal());
-        if (req.getTossRevenueI() != null) entry.setTossRevenueI(req.getTossRevenueI());
+    private void applyDailyRequest(AdMetricDailyEntry e, AdMetricFullRequest r) {
+        if (r.getTossRevenueR() != null) e.setTossRevenueR(r.getTossRevenueR());
+        if (r.getTossRevenueF() != null) e.setTossRevenueF(r.getTossRevenueF());
+        if (r.getTossRevenueBTotal() != null) e.setTossRevenueBTotal(r.getTossRevenueBTotal());
+        if (r.getTossRevenueI() != null) e.setTossRevenueI(r.getTossRevenueI());
 
-        if (req.getEcpmRReported() != null) entry.setEcpmRReported(req.getEcpmRReported());
-        if (req.getEcpmFReported() != null) entry.setEcpmFReported(req.getEcpmFReported());
-        if (req.getEcpmBTotalReported() != null) entry.setEcpmBTotalReported(req.getEcpmBTotalReported());
-        if (req.getEcpmIReported() != null) entry.setEcpmIReported(req.getEcpmIReported());
+        if (r.getEcpmRReported() != null) e.setEcpmRReported(r.getEcpmRReported());
+        if (r.getEcpmFReported() != null) e.setEcpmFReported(r.getEcpmFReported());
+        if (r.getEcpmBTotalReported() != null) e.setEcpmBTotalReported(r.getEcpmBTotalReported());
+        if (r.getEcpmIReported() != null) e.setEcpmIReported(r.getEcpmIReported());
 
-        if (req.getImpressionRReported() != null) entry.setImpressionRReported(req.getImpressionRReported());
-        if (req.getImpressionFReported() != null) entry.setImpressionFReported(req.getImpressionFReported());
-        if (req.getImpressionBTotal() != null) entry.setImpressionBTotal(req.getImpressionBTotal());
-        if (req.getImpressionI() != null) entry.setImpressionI(req.getImpressionI());
+        if (r.getCtrRReported() != null) e.setCtrRReported(r.getCtrRReported());
+        if (r.getCtrFReported() != null) e.setCtrFReported(r.getCtrFReported());
+        if (r.getCtrBTotalReported() != null) e.setCtrBTotalReported(r.getCtrBTotalReported());
+        if (r.getCtrIReported() != null) e.setCtrIReported(r.getCtrIReported());
 
-        if (req.getNewInflowToss() != null) entry.setNewInflowToss(req.getNewInflowToss());
-        if (req.getAvgSessionSec() != null) entry.setAvgSessionSec(req.getAvgSessionSec());
-        if (req.getBenefitsTabInflow() != null) entry.setBenefitsTabInflow(req.getBenefitsTabInflow());
+        if (r.getImpressionRReported() != null) e.setImpressionRReported(r.getImpressionRReported());
+        if (r.getImpressionFReported() != null) e.setImpressionFReported(r.getImpressionFReported());
+        if (r.getImpressionBTotal() != null) e.setImpressionBTotal(r.getImpressionBTotal());
+        if (r.getImpressionI() != null) e.setImpressionI(r.getImpressionI());
     }
 
-    /**
-     * 변경된 컬럼만 추출 — {col: {"before": x, "after": y}}.
-     * 요청에서 null인 필드는 변경 대상이 아님 (= 미입력).
-     */
-    private Map<String, Map<String, Object>> computeDiff(AdMetricDailyEntry before, AdMetricDailyRequest req) {
+    private Map<String, Map<String, Object>> computeDiff(AdMetricDailyEntry b, AdMetricFullRequest r) {
         Map<String, Map<String, Object>> changed = new LinkedHashMap<>();
-        addIfChanged(changed, "tossRevenueR", before.getTossRevenueR(), req.getTossRevenueR());
-        addIfChanged(changed, "tossRevenueF", before.getTossRevenueF(), req.getTossRevenueF());
-        addIfChanged(changed, "tossRevenueBTotal", before.getTossRevenueBTotal(), req.getTossRevenueBTotal());
-        addIfChanged(changed, "tossRevenueI", before.getTossRevenueI(), req.getTossRevenueI());
+        addIfChanged(changed, "tossRevenueR", b.getTossRevenueR(), r.getTossRevenueR());
+        addIfChanged(changed, "tossRevenueF", b.getTossRevenueF(), r.getTossRevenueF());
+        addIfChanged(changed, "tossRevenueBTotal", b.getTossRevenueBTotal(), r.getTossRevenueBTotal());
+        addIfChanged(changed, "tossRevenueI", b.getTossRevenueI(), r.getTossRevenueI());
 
-        addIfChanged(changed, "ecpmRReported", before.getEcpmRReported(), req.getEcpmRReported());
-        addIfChanged(changed, "ecpmFReported", before.getEcpmFReported(), req.getEcpmFReported());
-        addIfChanged(changed, "ecpmBTotalReported", before.getEcpmBTotalReported(), req.getEcpmBTotalReported());
-        addIfChanged(changed, "ecpmIReported", before.getEcpmIReported(), req.getEcpmIReported());
+        addIfChanged(changed, "ecpmRReported", b.getEcpmRReported(), r.getEcpmRReported());
+        addIfChanged(changed, "ecpmFReported", b.getEcpmFReported(), r.getEcpmFReported());
+        addIfChanged(changed, "ecpmBTotalReported", b.getEcpmBTotalReported(), r.getEcpmBTotalReported());
+        addIfChanged(changed, "ecpmIReported", b.getEcpmIReported(), r.getEcpmIReported());
 
-        addIfChanged(changed, "impressionRReported", before.getImpressionRReported(), req.getImpressionRReported());
-        addIfChanged(changed, "impressionFReported", before.getImpressionFReported(), req.getImpressionFReported());
-        addIfChanged(changed, "impressionBTotal", before.getImpressionBTotal(), req.getImpressionBTotal());
-        addIfChanged(changed, "impressionI", before.getImpressionI(), req.getImpressionI());
+        addIfChanged(changed, "ctrRReported", b.getCtrRReported(), r.getCtrRReported());
+        addIfChanged(changed, "ctrFReported", b.getCtrFReported(), r.getCtrFReported());
+        addIfChanged(changed, "ctrBTotalReported", b.getCtrBTotalReported(), r.getCtrBTotalReported());
+        addIfChanged(changed, "ctrIReported", b.getCtrIReported(), r.getCtrIReported());
 
-        addIfChanged(changed, "newInflowToss", before.getNewInflowToss(), req.getNewInflowToss());
-        addIfChanged(changed, "avgSessionSec", before.getAvgSessionSec(), req.getAvgSessionSec());
-        addIfChanged(changed, "benefitsTabInflow", before.getBenefitsTabInflow(), req.getBenefitsTabInflow());
+        addIfChanged(changed, "impressionRReported", b.getImpressionRReported(), r.getImpressionRReported());
+        addIfChanged(changed, "impressionFReported", b.getImpressionFReported(), r.getImpressionFReported());
+        addIfChanged(changed, "impressionBTotal", b.getImpressionBTotal(), r.getImpressionBTotal());
+        addIfChanged(changed, "impressionI", b.getImpressionI(), r.getImpressionI());
         return changed;
     }
 
@@ -281,11 +283,11 @@ public class AdMetricRestController {
 
     // ==================== Request DTOs ====================
 
-    @Getter
-    @Setter
-    public static class AdMetricDailyRequest {
+    @Getter @Setter
+    public static class AdMetricFullRequest {
         private LocalDate metricDate;
 
+        // 일별 4축 (R/F/B합산/I 각각: 노출·시청률·eCPM·수익)
         private Integer tossRevenueR;
         private Integer tossRevenueF;
         private Integer tossRevenueBTotal;
@@ -296,20 +298,30 @@ public class AdMetricRestController {
         private Integer ecpmBTotalReported;
         private Integer ecpmIReported;
 
+        private BigDecimal ctrRReported;
+        private BigDecimal ctrFReported;
+        private BigDecimal ctrBTotalReported;
+        private BigDecimal ctrIReported;
+
         private Integer impressionRReported;
         private Integer impressionFReported;
         private Integer impressionBTotal;
         private Integer impressionI;
 
-        private Integer newInflowToss;
-        private BigDecimal avgSessionSec;
-        private Integer benefitsTabInflow;
+        // 위치별 분해 (B + I)
+        private List<PositionEntryRequest> banners;
+        private List<PositionEntryRequest> images;
+
+        // D+7 이후 수정 시 NOT NULL
+        private String reason;
     }
 
-    @Getter
-    @Setter
-    public static class AdMetricDailyPatchRequest extends AdMetricDailyRequest {
-        /** D+7 이후 수정 시 NOT NULL */
-        private String reason;
+    @Getter @Setter
+    public static class PositionEntryRequest {
+        private AdWatchLocation adPositionCode;
+        private Integer impression;
+        private BigDecimal ctrReported;
+        private Integer ecpmReported;
+        private Integer revenue;
     }
 }
