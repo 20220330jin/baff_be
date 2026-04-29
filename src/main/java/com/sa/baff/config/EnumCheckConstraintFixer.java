@@ -36,6 +36,7 @@ public class EnumCheckConstraintFixer implements ApplicationRunner {
         fixCheck("reward_configs", "reward_type", RewardType.values());
         fixCheck("reward_histories", "reward_type", RewardType.values());
         fixCheck("reward_histories", "status", RewardStatus.values());
+        fixCheck("user_reward_dailies", "reward_type", RewardType.values());
         fixCheck("piece_transactions", "type", PieceTransactionType.values());
 
         // 광고전략 — ad_position_code는 enum이 아닌 String varchar (OTHER 등 임의값 허용).
