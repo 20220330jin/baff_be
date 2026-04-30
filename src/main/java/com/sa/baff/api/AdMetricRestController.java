@@ -5,6 +5,8 @@ import com.sa.baff.domain.AdMetricDailyEntry;
 import com.sa.baff.domain.AdMetricDeployMarker;
 import com.sa.baff.domain.AdMetricEntryRevisionLog;
 import com.sa.baff.domain.AdMetricImageEntry;
+import com.sa.baff.domain.AdMetricInterstitialEntry;
+import com.sa.baff.domain.AdMetricRewardEntry;
 import com.sa.baff.domain.UserB;
 import com.sa.baff.model.dto.AdMetricAnalyticsDto;
 import com.sa.baff.repository.AdMetricBannerEntryRepository;
@@ -12,6 +14,8 @@ import com.sa.baff.repository.AdMetricDailyEntryRepository;
 import com.sa.baff.repository.AdMetricDeployMarkerRepository;
 import com.sa.baff.repository.AdMetricEntryRevisionLogRepository;
 import com.sa.baff.repository.AdMetricImageEntryRepository;
+import com.sa.baff.repository.AdMetricInterstitialEntryRepository;
+import com.sa.baff.repository.AdMetricRewardEntryRepository;
 import com.sa.baff.repository.UserRepository;
 import com.sa.baff.service.AdMetricAnalyticsService;
 import jakarta.transaction.Transactional;
@@ -53,6 +57,8 @@ public class AdMetricRestController {
     private final AdMetricEntryRevisionLogRepository revisionLogRepository;
     private final AdMetricBannerEntryRepository bannerRepository;
     private final AdMetricImageEntryRepository imageRepository;
+    private final AdMetricRewardEntryRepository rewardRepository;
+    private final AdMetricInterstitialEntryRepository interstitialRepository;
     private final AdMetricDeployMarkerRepository deployMarkerRepository;
     private final UserRepository userRepository;
     private final AdMetricAnalyticsService analyticsService;
@@ -69,13 +75,17 @@ public class AdMetricRestController {
             AdMetricDailyEntry daily = dailyRepository.findByMetricDate(date).orElse(null);
             List<AdMetricBannerEntry> banners = bannerRepository.findByMetricDate(date);
             List<AdMetricImageEntry> images = imageRepository.findByMetricDate(date);
+            List<AdMetricRewardEntry> rewards = rewardRepository.findByMetricDate(date);
+            List<AdMetricInterstitialEntry> interstitials = interstitialRepository.findByMetricDate(date);
             if (daily != null) {
-                applyPositionSumsFromLists(daily, banners, images);
+                applyPositionSumsFromLists(daily, banners, images, rewards, interstitials);
             }
             Map<String, Object> body = new LinkedHashMap<>();
             body.put("daily", daily);
             body.put("banners", banners);
             body.put("images", images);
+            body.put("rewards", rewards);
+            body.put("interstitials", interstitials);
             return ResponseEntity.ok(body);
         }
         if (from != null && to != null) {
@@ -157,6 +167,8 @@ public class AdMetricRestController {
         // 위치별 — 들어온 키만 upsert. 미수신 위치는 건드리지 않음.
         upsertBanners(date, req.getBanners(), actorAdminId);
         upsertImages(date, req.getImages(), actorAdminId);
+        upsertRewards(date, req.getRewards(), actorAdminId);
+        upsertInterstitials(date, req.getInterstitials(), actorAdminId);
 
         if (existingOpt.isPresent() && afterDPlus7 && !changed.isEmpty()) {
             AdMetricEntryRevisionLog log = new AdMetricEntryRevisionLog();
@@ -208,6 +220,80 @@ public class AdMetricRestController {
                 if (pr.getAdIdSnapshot() != null) reloaded.setAdIdSnapshot(pr.getAdIdSnapshot());
                 reloaded.setActorAdminId(actorAdminId);
                 bannerRepository.save(reloaded);
+            }
+        }
+    }
+
+    private void upsertRewards(LocalDate date, List<PositionEntryRequest> reqList, Long actorAdminId) {
+        if (reqList == null) return;
+        List<AdMetricRewardEntry> existing = rewardRepository.findByMetricDate(date);
+        Map<String, AdMetricRewardEntry> byPos = new HashMap<>();
+        for (AdMetricRewardEntry e : existing) byPos.put(e.getAdPositionCode(), e);
+
+        for (PositionEntryRequest pr : reqList) {
+            if (pr.getAdPositionCode() == null || pr.getAdPositionCode().isBlank()) continue;
+            AdMetricRewardEntry row = byPos.get(pr.getAdPositionCode());
+            if (row == null) {
+                row = new AdMetricRewardEntry();
+                row.setMetricDate(date);
+                row.setAdPositionCode(pr.getAdPositionCode());
+            }
+            if (pr.getImpression() != null) row.setImpression(pr.getImpression());
+            if (pr.getCtrReported() != null) row.setCtrReported(pr.getCtrReported());
+            if (pr.getEcpmReported() != null) row.setEcpmReported(pr.getEcpmReported());
+            if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
+            if (pr.getAdIdSnapshot() != null) row.setAdIdSnapshot(pr.getAdIdSnapshot());
+            row.setActorAdminId(actorAdminId);
+            try {
+                rewardRepository.save(row);
+            } catch (DataIntegrityViolationException dup) {
+                AdMetricRewardEntry reloaded = rewardRepository.findByMetricDate(date).stream()
+                        .filter(b -> b.getAdPositionCode().equals(pr.getAdPositionCode()))
+                        .findFirst().orElseThrow(() -> dup);
+                if (pr.getImpression() != null) reloaded.setImpression(pr.getImpression());
+                if (pr.getCtrReported() != null) reloaded.setCtrReported(pr.getCtrReported());
+                if (pr.getEcpmReported() != null) reloaded.setEcpmReported(pr.getEcpmReported());
+                if (pr.getRevenue() != null) reloaded.setRevenue(pr.getRevenue());
+                if (pr.getAdIdSnapshot() != null) reloaded.setAdIdSnapshot(pr.getAdIdSnapshot());
+                reloaded.setActorAdminId(actorAdminId);
+                rewardRepository.save(reloaded);
+            }
+        }
+    }
+
+    private void upsertInterstitials(LocalDate date, List<PositionEntryRequest> reqList, Long actorAdminId) {
+        if (reqList == null) return;
+        List<AdMetricInterstitialEntry> existing = interstitialRepository.findByMetricDate(date);
+        Map<String, AdMetricInterstitialEntry> byPos = new HashMap<>();
+        for (AdMetricInterstitialEntry e : existing) byPos.put(e.getAdPositionCode(), e);
+
+        for (PositionEntryRequest pr : reqList) {
+            if (pr.getAdPositionCode() == null || pr.getAdPositionCode().isBlank()) continue;
+            AdMetricInterstitialEntry row = byPos.get(pr.getAdPositionCode());
+            if (row == null) {
+                row = new AdMetricInterstitialEntry();
+                row.setMetricDate(date);
+                row.setAdPositionCode(pr.getAdPositionCode());
+            }
+            if (pr.getImpression() != null) row.setImpression(pr.getImpression());
+            if (pr.getCtrReported() != null) row.setCtrReported(pr.getCtrReported());
+            if (pr.getEcpmReported() != null) row.setEcpmReported(pr.getEcpmReported());
+            if (pr.getRevenue() != null) row.setRevenue(pr.getRevenue());
+            if (pr.getAdIdSnapshot() != null) row.setAdIdSnapshot(pr.getAdIdSnapshot());
+            row.setActorAdminId(actorAdminId);
+            try {
+                interstitialRepository.save(row);
+            } catch (DataIntegrityViolationException dup) {
+                AdMetricInterstitialEntry reloaded = interstitialRepository.findByMetricDate(date).stream()
+                        .filter(b -> b.getAdPositionCode().equals(pr.getAdPositionCode()))
+                        .findFirst().orElseThrow(() -> dup);
+                if (pr.getImpression() != null) reloaded.setImpression(pr.getImpression());
+                if (pr.getCtrReported() != null) reloaded.setCtrReported(pr.getCtrReported());
+                if (pr.getEcpmReported() != null) reloaded.setEcpmReported(pr.getEcpmReported());
+                if (pr.getRevenue() != null) reloaded.setRevenue(pr.getRevenue());
+                if (pr.getAdIdSnapshot() != null) reloaded.setAdIdSnapshot(pr.getAdIdSnapshot());
+                reloaded.setActorAdminId(actorAdminId);
+                interstitialRepository.save(reloaded);
             }
         }
     }
@@ -301,12 +387,16 @@ public class AdMetricRestController {
     private void applyPositionSums(AdMetricDailyEntry daily) {
         List<AdMetricBannerEntry> banners = bannerRepository.findByMetricDate(daily.getMetricDate());
         List<AdMetricImageEntry> images = imageRepository.findByMetricDate(daily.getMetricDate());
-        applyPositionSumsFromLists(daily, banners, images);
+        List<AdMetricRewardEntry> rewards = rewardRepository.findByMetricDate(daily.getMetricDate());
+        List<AdMetricInterstitialEntry> interstitials = interstitialRepository.findByMetricDate(daily.getMetricDate());
+        applyPositionSumsFromLists(daily, banners, images, rewards, interstitials);
     }
 
     private void applyPositionSumsFromLists(AdMetricDailyEntry daily,
                                             List<AdMetricBannerEntry> banners,
-                                            List<AdMetricImageEntry> images) {
+                                            List<AdMetricImageEntry> images,
+                                            List<AdMetricRewardEntry> rewards,
+                                            List<AdMetricInterstitialEntry> interstitials) {
         // B 합산 — 위치별 입력 있으면 그 합으로, 운영자가 daily에 직접 입력한 값이 있으면 우선 보존
         if (!banners.isEmpty()) {
             int impSum = 0, revSum = 0;
@@ -363,6 +453,64 @@ public class AdMetricRestController {
             }
             if (daily.getEcpmIReported() == null && weightedEcpmDen > 0) {
                 daily.setEcpmIReported((int) Math.round(weightedEcpmNum / weightedEcpmDen));
+            }
+        }
+        // R 합산 — 위치별 입력 있으면 daily 미입력 필드를 위치 합으로 자동 채움
+        if (!rewards.isEmpty()) {
+            int impSum = 0, revSum = 0;
+            double weightedCtrNum = 0, weightedCtrDen = 0;
+            double weightedEcpmNum = 0, weightedEcpmDen = 0;
+            for (AdMetricRewardEntry r : rewards) {
+                int imp = r.getImpression() == null ? 0 : r.getImpression();
+                int rev = r.getRevenue() == null ? 0 : r.getRevenue();
+                impSum += imp;
+                revSum += rev;
+                if (imp > 0 && r.getCtrReported() != null) {
+                    weightedCtrNum += r.getCtrReported().doubleValue() * imp;
+                    weightedCtrDen += imp;
+                }
+                if (imp > 0 && r.getEcpmReported() != null) {
+                    weightedEcpmNum += r.getEcpmReported() * imp;
+                    weightedEcpmDen += imp;
+                }
+            }
+            if (daily.getImpressionRReported() == null) daily.setImpressionRReported(impSum);
+            if (daily.getTossRevenueR() == null) daily.setTossRevenueR(revSum);
+            if (daily.getCtrRReported() == null && weightedCtrDen > 0) {
+                daily.setCtrRReported(java.math.BigDecimal.valueOf(weightedCtrNum / weightedCtrDen)
+                        .setScale(2, java.math.RoundingMode.HALF_UP));
+            }
+            if (daily.getEcpmRReported() == null && weightedEcpmDen > 0) {
+                daily.setEcpmRReported((int) Math.round(weightedEcpmNum / weightedEcpmDen));
+            }
+        }
+        // F 합산 — 동일 로직
+        if (!interstitials.isEmpty()) {
+            int impSum = 0, revSum = 0;
+            double weightedCtrNum = 0, weightedCtrDen = 0;
+            double weightedEcpmNum = 0, weightedEcpmDen = 0;
+            for (AdMetricInterstitialEntry f : interstitials) {
+                int imp = f.getImpression() == null ? 0 : f.getImpression();
+                int rev = f.getRevenue() == null ? 0 : f.getRevenue();
+                impSum += imp;
+                revSum += rev;
+                if (imp > 0 && f.getCtrReported() != null) {
+                    weightedCtrNum += f.getCtrReported().doubleValue() * imp;
+                    weightedCtrDen += imp;
+                }
+                if (imp > 0 && f.getEcpmReported() != null) {
+                    weightedEcpmNum += f.getEcpmReported() * imp;
+                    weightedEcpmDen += imp;
+                }
+            }
+            if (daily.getImpressionFReported() == null) daily.setImpressionFReported(impSum);
+            if (daily.getTossRevenueF() == null) daily.setTossRevenueF(revSum);
+            if (daily.getCtrFReported() == null && weightedCtrDen > 0) {
+                daily.setCtrFReported(java.math.BigDecimal.valueOf(weightedCtrNum / weightedCtrDen)
+                        .setScale(2, java.math.RoundingMode.HALF_UP));
+            }
+            if (daily.getEcpmFReported() == null && weightedEcpmDen > 0) {
+                daily.setEcpmFReported((int) Math.round(weightedEcpmNum / weightedEcpmDen));
             }
         }
     }
@@ -478,9 +626,11 @@ public class AdMetricRestController {
         private BigDecimal retentionD1New;
         private BigDecimal retentionD1Total;
 
-        // 위치별 분해 (B + I)
+        // 위치별 분해 (B + I + R + F)
         private List<PositionEntryRequest> banners;
         private List<PositionEntryRequest> images;
+        private List<PositionEntryRequest> rewards;
+        private List<PositionEntryRequest> interstitials;
 
         // D+7 이후 수정 시 NOT NULL
         private String reason;

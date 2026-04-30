@@ -43,6 +43,8 @@ public class EnumCheckConstraintFixer implements ApplicationRunner {
         // ddl-auto가 옛 enum 시절 흔적/캐시로 CHECK를 재생성하는 케이스 방어 — DROP only.
         dropCheck("ad_metric_banner_entry", "ad_position_code");
         dropCheck("ad_metric_image_entry", "ad_position_code");
+        dropCheck("ad_metric_reward_entry", "ad_position_code");
+        dropCheck("ad_metric_interstitial_entry", "ad_position_code");
     }
 
     /** 컬럼에 묶인 CHECK 제약 모두 DROP (varchar 자유값 허용용) */
