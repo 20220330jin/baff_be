@@ -57,6 +57,7 @@ public class AdminDashboardDto {
         private String type;
         private String message;
         private String timestamp;
+        private String platform;
     }
 
     @Data

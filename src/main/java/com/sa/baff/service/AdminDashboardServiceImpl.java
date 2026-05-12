@@ -265,6 +265,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .type("USER_JOIN")
                         .message(u.getNickname() + "님이 가입했습니다.")
                         .timestamp(u.getRegDateTime().format(DATETIME_FORMATTER))
+                        .platform(u.getPlatform())
                         .build()));
 
         // 최근 문의
@@ -276,6 +277,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .type("INQUIRY")
                         .message("새 문의: " + i.getTitle())
                         .timestamp(i.getRegDateTime().format(DATETIME_FORMATTER))
+                        .platform(i.getUser() != null ? i.getUser().getPlatform() : null)
                         .build()));
 
         // 최근 배틀 생성
@@ -287,6 +289,7 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                         .type("BATTLE_CREATED")
                         .message("새 배틀: " + b.getName())
                         .timestamp(b.getRegDateTime().format(DATETIME_FORMATTER))
+                        .platform(b.getHost() != null ? b.getHost().getPlatform() : null)
                         .build()));
 
         // 전체를 timestamp 기준 내림차순 정렬 후 최근 10건
