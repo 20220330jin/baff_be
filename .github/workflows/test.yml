@@ -34,9 +34,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Create application-local.yml
-        run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > src/main/resources/application-local.yml
-
       # ubuntu-latest에는 Docker가 사전 설치되어 있어 Testcontainers 동작 가능
       - name: Run tests (includes Testcontainers PostgreSQL)
         run: ./gradlew test

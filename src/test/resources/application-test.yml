@@ -35,6 +35,7 @@ cloud:
     endpoint: http://localhost:9000
     region: auto
     bucket-name: test-bucket
+    public-url: http://localhost:9000/test-bucket
 
 admin:
   url: http://localhost:8081
