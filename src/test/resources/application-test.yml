@@ -13,12 +13,14 @@ spring:
           kakao:
             client-id: test-kakao-id
             client-secret: test-kakao-secret
+            redirect-uri: "http://localhost:8080/login/oauth2/code/kakao"
             scope: account_email,profile_nickname
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
           google:
             client-id: test-google-id
             client-secret: test-google-secret
+            redirect-uri: "http://localhost:8080/login/oauth2/code/google"
         provider:
           kakao:
             authorization-uri: https://kauth.kakao.com/oauth/authorize
