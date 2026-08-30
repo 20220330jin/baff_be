@@ -22,7 +22,7 @@ jobs:
         run: ls -al src/main/resources
 
       - name: Create application-local.yml
-        run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > src/main/resources/application-local.yml
+        run: echo "${{ secrets.APPLICATION_PROPERTIES }}" > application-local.yml
 
       - name: Build Docker image
         run: docker build -t baff_be .
