@@ -96,9 +96,12 @@ public class WebSecurityConfig {
           corsConfiguration.addAllowedOrigin("https://baff-fe.vercel.app");
           corsConfiguration.addAllowedOrigin("https://change-up.me");
           corsConfiguration.addAllowedOrigin("https://www.change-up.me");
-          // Toss 미니앱
+          // Toss 미니앱 (SDK 2.x — 롤백 대비 병존)
           corsConfiguration.addAllowedOrigin("https://changeup.apps.tossmini.com");
           corsConfiguration.addAllowedOrigin("https://changeup.private-apps.tossmini.com");
+          // Toss 미니앱 (SDK 3.x — apps. -> web. 서브도메인 변경. 미등록 시 API 전면 차단)
+          corsConfiguration.addAllowedOrigin("https://changeup.web.tossmini.com");
+          corsConfiguration.addAllowedOrigin("https://changeup.private-web.tossmini.com");
 
           UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
           source.registerCorsConfiguration("/**", corsConfiguration);
