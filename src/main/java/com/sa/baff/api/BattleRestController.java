@@ -1,8 +1,11 @@
 package com.sa.baff.api;
 
 import com.sa.baff.domain.BattleRoom;
+import com.sa.baff.model.dto.BattleCommentDto;
 import com.sa.baff.model.dto.BattleRoomDto;
+import com.sa.baff.model.vo.BattleCommentVO;
 import com.sa.baff.model.vo.BattleRoomVO;
+import com.sa.baff.service.BattleCommentService;
 import com.sa.baff.service.BattleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BattleRestController {
     private final BattleService battleService;
+    private final BattleCommentService battleCommentService;
 
     @PostMapping("/createBattleRoom")
     public void createBattleRoom(@RequestBody BattleRoomVO.createBattleRoom createBattleRoomParam, @AuthenticationPrincipal String socialId) {
@@ -39,6 +43,24 @@ public class BattleRestController {
     @GetMapping("/{entryCode}/details")
     public BattleRoomDto.getBattleRoomDetails.battleRoomDetail getBattleRoomDetails(@PathVariable String entryCode) {
         return battleService.getBattleRoomDetails(entryCode);
+    }
+
+    /** 대결 댓글 목록 (참여자 전용, 오래된 순) */
+    @GetMapping("/{entryCode}/comments")
+    public List<BattleCommentDto.commentItem> getBattleComments(@PathVariable String entryCode, @AuthenticationPrincipal String socialId) {
+        return battleCommentService.getComments(entryCode, socialId);
+    }
+
+    /** 대결 댓글 작성 (참여자 전용, 최대 200자) */
+    @PostMapping("/{entryCode}/comments")
+    public BattleCommentDto.commentItem createBattleComment(@PathVariable String entryCode, @RequestBody BattleCommentVO.createComment param, @AuthenticationPrincipal String socialId) {
+        return battleCommentService.createComment(entryCode, param.getContent(), socialId);
+    }
+
+    /** 대결 댓글 삭제 (본인 댓글만, 소프트 삭제) */
+    @PostMapping("/{entryCode}/comments/{commentId}/delete")
+    public void deleteBattleComment(@PathVariable String entryCode, @PathVariable Long commentId, @AuthenticationPrincipal String socialId) {
+        battleCommentService.deleteComment(entryCode, commentId, socialId);
     }
 
     @PostMapping("/{entryCode}/battleGoalSetting")
