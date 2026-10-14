@@ -22,14 +22,6 @@ public class PieceRestController {
     }
 
     /**
-     * 조각 지급 (테스트/관리자용)
-     */
-    @PostMapping("/deposit")
-    public void deposit(@AuthenticationPrincipal String socialId, @RequestBody Long amount) {
-        pieceService.deposit(socialId, amount);
-    }
-
-    /**
      * 잔액 충분 여부 확인
      */
     @GetMapping("/check")
