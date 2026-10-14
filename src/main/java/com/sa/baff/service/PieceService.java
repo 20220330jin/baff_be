@@ -12,11 +12,6 @@ public interface PieceService {
     PieceDto.balanceResponse getBalance(String socialId);
 
     /**
-     * 조각 지급 (관리자/보상)
-     */
-    void deposit(String socialId, Long amount);
-
-    /**
      * 배틀 내기 차감 (배틀 시작 시 양쪽 모두)
      */
     void deductForBet(UserB user, Long amount, BattleRoom battleRoom);

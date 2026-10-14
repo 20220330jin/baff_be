@@ -40,23 +40,6 @@ public class PieceServiceImpl implements PieceService {
     }
 
     @Override
-    public void deposit(String socialId, Long amount) {
-        UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
-                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다."));
-
-        Piece piece = getOrCreatePiece(user);
-        piece.addBalance(amount);
-        pieceRepository.save(piece);
-
-        PieceTransaction tx = PieceTransaction.builder()
-                .user(user)
-                .amount(amount)
-                .type(PieceTransactionType.DEPOSIT)
-                .build();
-        pieceTransactionRepository.save(tx);
-    }
-
-    @Override
     public void deductForBet(UserB user, Long amount, BattleRoom battleRoom) {
         Piece piece = getOrCreatePiece(user);
         piece.deductBalance(amount);
