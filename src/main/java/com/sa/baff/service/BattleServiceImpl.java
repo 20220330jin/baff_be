@@ -157,8 +157,11 @@ public class BattleServiceImpl implements BattleService {
                     info.setUserId(participant.getUser().getId());
                     info.setStartingWeight(participant.getStartingWeight());
 
-                    // Optional<Weight> 객체에서 getWeight() 메서드를호출
-                    Double currentWeight = weightRepository.findFirstByUserOrderByRecordDateDesc(participant.getUser())
+                    // 시작된 대결은 정산과 같은 기준(endDate까지 마지막 기록), 시작 전은 최신 기록
+                    Optional<Weight> latestWeight = battleRoom.getEndDate() != null
+                            ? weightRepository.findTopByUserAndRecordDateLessThanEqualOrderByRecordDateDesc(participant.getUser(), battleRoom.getEndDate().atTime(LocalTime.MAX))
+                            : weightRepository.findFirstByUserOrderByRecordDateDesc(participant.getUser());
+                    Double currentWeight = latestWeight
                             .map(Weight::getWeight)
                             .orElse(participant.getStartingWeight());
                     info.setCurrentWeight(currentWeight);
