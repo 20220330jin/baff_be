@@ -1,5 +1,6 @@
 package com.sa.baff.model.dto;
 
+import com.sa.baff.util.FastingEndStatus;
 import com.sa.baff.util.FastingMode;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,6 +42,10 @@ public class FastingRecordDto {
         private FastingMode mode;
         private Integer targetHours;
         private Long elapsedMinutes; // 현재까지 경과 시간(분)
+        /** 시작 후 48시간이 지나 「종료 시각 확인 필요」 (M-043 · 조회 때 계산) */
+        private Boolean needsEndTime;
+        /** 진행 상한 시간 (M-043) */
+        private Integer maxHours;
     }
 
     @Getter
@@ -59,11 +64,17 @@ public class FastingRecordDto {
         private Long id;
         private Integer actualMinutes;
         private Boolean completed;
+        /** 실제 지급 그램 (M-043 · 한도 초과 · 이미 지급 · 미확인이면 0) */
+        private Integer earnedGrams;
+        private FastingEndStatus endStatus;
 
-        public EndFastingResponse(Long id, Integer actualMinutes, Boolean completed) {
+        public EndFastingResponse(Long id, Integer actualMinutes, Boolean completed,
+                                  Integer earnedGrams, FastingEndStatus endStatus) {
             this.id = id;
             this.actualMinutes = actualMinutes;
             this.completed = completed;
+            this.earnedGrams = earnedGrams;
+            this.endStatus = endStatus;
         }
     }
 }

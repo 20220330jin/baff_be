@@ -13,6 +13,7 @@ import com.sa.baff.repository.FastingRecordRepository;
 import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.AiFeatureType;
 import com.sa.baff.util.DateTimeUtils;
+import com.sa.baff.util.FastingEndStatus;
 import com.sa.baff.util.FastingMode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,9 @@ public class FastingRecordServiceImpl implements FastingRecordService {
             throw new IllegalStateException("이미 진행중인 단식이 있습니다.");
         }
 
+        if (param.getMode() == FastingMode.CUSTOM) {
+            FastingEndPolicy.validateCustomHours(param.getTargetHours());
+        }
         Integer targetHours = param.getMode() == FastingMode.CUSTOM
                 ? param.getTargetHours()
                 : MODE_TARGET_HOURS.getOrDefault(param.getMode(), 16);
@@ -74,37 +78,66 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         return new FastingRecordDto.StartFastingResponse(saved.getId());
     }
 
+    /**
+     * 단식 종료 (M-043). 세 경로:
+     * - unknown=true: 「기억 안 나요」 — 종료 시각 미확인(UNKNOWN)으로 남기고 통계 · 보상 제외
+     * - endTime 있음: 식사 시각으로 복구 — 시작+1분 ~ 시작+48시간 · 지금 이하 · 다른 기록과 겹침 금지
+     * - endTime 없음: 지금 시각으로 종료 — 시작 후 48시간이 지났으면 거절(식사 시각 필요)
+     * 기록은 잠금 조회로 읽어 같은 기록의 동시 요청을 한 번만 처리한다.
+     */
     @Override
     public FastingRecordDto.EndFastingResponse endFasting(FastingRecordVO.EndFasting param, String socialId) {
         UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        FastingRecord record = fastingRecordRepository.findById(param.getFastingRecordId())
+        FastingRecord record = fastingRecordRepository.findByIdForUpdate(param.getFastingRecordId())
                 .orElseThrow(() -> new IllegalArgumentException("단식 기록을 찾을 수 없습니다."));
 
         if (!record.getUser().getId().equals(user.getId())) {
             throw new IllegalArgumentException("본인의 단식 기록만 종료할 수 있습니다.");
         }
-        if (record.getEndTime() != null) {
-            throw new IllegalStateException("이미 종료된 단식입니다.");
+        if (record.getEndTime() != null || record.getEndStatus() != null) {
+            throw new IllegalStateException("이미 종료된 단식이에요.");
+        }
+
+        if (Boolean.TRUE.equals(param.getUnknown())) {
+            record.setEndStatus(FastingEndStatus.UNKNOWN);
+            fastingRecordRepository.save(record);
+            return new FastingRecordDto.EndFastingResponse(record.getId(), null, false, 0, FastingEndStatus.UNKNOWN);
         }
 
         LocalDateTime now = DateTimeUtils.now();
-        long actualMinutes = Duration.between(record.getStartTime(), now).toMinutes();
+        LocalDateTime endTime = resolveEndTime(record, user, param.getEndTime(), now);
+        long actualMinutes = FastingEndPolicy.elapsedMinutes(record.getStartTime(), endTime);
         boolean completed = actualMinutes >= (record.getTargetHours() * 60L);
 
-        record.setEndTime(now);
+        record.setEndTime(endTime);
         record.setActualMinutes((int) actualMinutes);
         record.setCompleted(completed);
-
+        record.setEndStatus(FastingEndStatus.CONFIRMED);
         fastingRecordRepository.save(record);
 
         // 목표 달성 시 그램 자동 지급 — 지급 못 하면 0 (예외 없음 · 같은 트랜잭션이라 예외면 종료까지 취소된다)
-        if (completed) {
-            rewardService.tryGrantFastingCompleteReward(socialId, record.getId());
-        }
+        int earnedGrams = completed ? rewardService.tryGrantFastingCompleteReward(socialId, record.getId()) : 0;
 
-        return new FastingRecordDto.EndFastingResponse(record.getId(), (int) actualMinutes, completed);
+        return new FastingRecordDto.EndFastingResponse(
+                record.getId(), (int) actualMinutes, completed, earnedGrams, FastingEndStatus.CONFIRMED);
+    }
+
+    /** 종료 시각 결정 — 입력이 있으면 검사 후 그 시각, 없으면 지금(상한 안일 때만) */
+    private LocalDateTime resolveEndTime(FastingRecord record, UserB user, LocalDateTime requested, LocalDateTime now) {
+        if (requested == null) {
+            if (FastingEndPolicy.needsEndTime(record.getStartTime(), now)) {
+                throw new IllegalStateException("식사 시각을 입력해 주세요.");
+            }
+            return now;
+        }
+        LocalDateTime endTime = requested.withSecond(0).withNano(0);
+        FastingEndPolicy.validateEndTime(record.getStartTime(), endTime, now);
+        if (fastingRecordRepository.existsOverlap(user, record.getId(), record.getStartTime(), endTime)) {
+            throw new IllegalArgumentException("다른 단식 기록과 시간이 겹쳐요.");
+        }
+        return endTime;
     }
 
     @Override
@@ -127,6 +160,8 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         dto.setMode(record.getMode());
         dto.setTargetHours(record.getTargetHours());
         dto.setElapsedMinutes(elapsed);
+        dto.setNeedsEndTime(FastingEndPolicy.needsEndTime(record.getStartTime(), DateTimeUtils.now()));
+        dto.setMaxHours(FastingEndPolicy.MAX_FASTING_HOURS);
 
         return dto;
     }
