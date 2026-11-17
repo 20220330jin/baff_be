@@ -1,5 +1,6 @@
 package com.sa.baff.domain;
 
+import com.sa.baff.util.FastingEndStatus;
 import com.sa.baff.util.FastingMode;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -48,6 +49,11 @@ public class FastingRecord extends BaseEntity {
     /** 달성 여부 (목표 시간 이상 단식했는지) */
     @Column(nullable = false)
     private Boolean completed = false;
+
+    /** 종료 상태 (M-043). 진행 중이면 null · 종료 시각이 있고 null 이면 CONFIRMED 로 읽는다 */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private FastingEndStatus endStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "userId")

@@ -13,6 +13,7 @@ import com.sa.baff.repository.FastingRecordRepository;
 import com.sa.baff.service.account.AccountLinkedUserResolver;
 import com.sa.baff.util.AiFeatureType;
 import com.sa.baff.util.DateTimeUtils;
+import com.sa.baff.util.FastingEndStatus;
 import com.sa.baff.util.FastingMode;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -53,12 +54,14 @@ public class FastingRecordServiceImpl implements FastingRecordService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // 이미 진행중인 단식이 있는지 확인
-        Optional<FastingRecord> active = fastingRecordRepository
-                .findByUserAndEndTimeIsNullAndDelYn(user, 'N');
+        Optional<FastingRecord> active = fastingRecordRepository.findActive(user);
         if (active.isPresent()) {
             throw new IllegalStateException("이미 진행중인 단식이 있습니다.");
         }
 
+        if (param.getMode() == FastingMode.CUSTOM) {
+            FastingEndPolicy.validateCustomHours(param.getTargetHours());
+        }
         Integer targetHours = param.getMode() == FastingMode.CUSTOM
                 ? param.getTargetHours()
                 : MODE_TARGET_HOURS.getOrDefault(param.getMode(), 16);
@@ -75,41 +78,66 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         return new FastingRecordDto.StartFastingResponse(saved.getId());
     }
 
+    /**
+     * 단식 종료 (M-043). 세 경로:
+     * - unknown=true: 「기억 안 나요」 — 종료 시각 미확인(UNKNOWN)으로 남기고 통계 · 보상 제외
+     * - endTime 있음: 식사 시각으로 복구 — 시작+1분 ~ 시작+48시간 · 지금 이하 · 다른 기록과 겹침 금지
+     * - endTime 없음: 지금 시각으로 종료 — 시작 후 48시간이 지났으면 거절(식사 시각 필요)
+     * 기록은 잠금 조회로 읽어 같은 기록의 동시 요청을 한 번만 처리한다.
+     */
     @Override
     public FastingRecordDto.EndFastingResponse endFasting(FastingRecordVO.EndFasting param, String socialId) {
         UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        FastingRecord record = fastingRecordRepository.findById(param.getFastingRecordId())
+        FastingRecord record = fastingRecordRepository.findByIdForUpdate(param.getFastingRecordId())
                 .orElseThrow(() -> new IllegalArgumentException("단식 기록을 찾을 수 없습니다."));
 
         if (!record.getUser().getId().equals(user.getId())) {
             throw new IllegalArgumentException("본인의 단식 기록만 종료할 수 있습니다.");
         }
-        if (record.getEndTime() != null) {
-            throw new IllegalStateException("이미 종료된 단식입니다.");
+        if (record.getEndTime() != null || record.getEndStatus() != null) {
+            throw new IllegalStateException("이미 종료된 단식이에요.");
+        }
+
+        if (Boolean.TRUE.equals(param.getUnknown())) {
+            record.setEndStatus(FastingEndStatus.UNKNOWN);
+            fastingRecordRepository.save(record);
+            return new FastingRecordDto.EndFastingResponse(record.getId(), null, false, 0, FastingEndStatus.UNKNOWN);
         }
 
         LocalDateTime now = DateTimeUtils.now();
-        long actualMinutes = Duration.between(record.getStartTime(), now).toMinutes();
+        LocalDateTime endTime = resolveEndTime(record, user, param.getEndTime(), now);
+        long actualMinutes = FastingEndPolicy.elapsedMinutes(record.getStartTime(), endTime);
         boolean completed = actualMinutes >= (record.getTargetHours() * 60L);
 
-        record.setEndTime(now);
+        record.setEndTime(endTime);
         record.setActualMinutes((int) actualMinutes);
         record.setCompleted(completed);
-
+        record.setEndStatus(FastingEndStatus.CONFIRMED);
         fastingRecordRepository.save(record);
 
-        // 목표 달성 시 그램 자동 지급 (RewardConfig.FASTING_COMPLETE 비활성 시 0g, 예외 swallow)
-        if (completed) {
-            try {
-                rewardService.grantFastingCompleteReward(socialId, record.getId());
-            } catch (Exception e) {
-                log.warn("간헐적 단식 완료 리워드 지급 실패 (fastingId={}): {}", record.getId(), e.getMessage());
-            }
-        }
+        // 목표 달성 시 그램 자동 지급 — 지급 못 하면 0 (예외 없음 · 같은 트랜잭션이라 예외면 종료까지 취소된다)
+        int earnedGrams = completed ? rewardService.tryGrantFastingCompleteReward(socialId, record.getId()) : 0;
 
-        return new FastingRecordDto.EndFastingResponse(record.getId(), (int) actualMinutes, completed);
+        return new FastingRecordDto.EndFastingResponse(
+                record.getId(), (int) actualMinutes, completed, earnedGrams, FastingEndStatus.CONFIRMED);
+    }
+
+    /** 종료 시각 결정 — 입력이 있으면 검사 후 그 시각, 없으면 지금(상한 안일 때만) */
+    private LocalDateTime resolveEndTime(FastingRecord record, UserB user, LocalDateTime requested, LocalDateTime now) {
+        if (requested == null) {
+            if (FastingEndPolicy.needsEndTime(record.getStartTime(), now)) {
+                throw new IllegalStateException("식사 시각을 입력해 주세요.");
+            }
+            return now;
+        }
+        LocalDateTime endTime = requested.withSecond(0).withNano(0);
+        FastingEndPolicy.validateEndTime(record.getStartTime(), endTime, now);
+        if (fastingRecordRepository.existsOverlap(user, record.getId(), record.getStartTime(), endTime)) {
+            throw new IllegalArgumentException("다른 단식 기록과 시간이 겹쳐요.");
+        }
+        return endTime;
     }
 
     @Override
@@ -117,8 +145,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Optional<FastingRecord> active = fastingRecordRepository
-                .findByUserAndEndTimeIsNullAndDelYn(user, 'N');
+        Optional<FastingRecord> active = fastingRecordRepository.findActive(user);
 
         if (active.isEmpty()) {
             return null;
@@ -133,6 +160,8 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         dto.setMode(record.getMode());
         dto.setTargetHours(record.getTargetHours());
         dto.setElapsedMinutes(elapsed);
+        dto.setNeedsEndTime(FastingEndPolicy.needsEndTime(record.getStartTime(), DateTimeUtils.now()));
+        dto.setMaxHours(FastingEndPolicy.MAX_FASTING_HOURS);
 
         return dto;
     }
@@ -157,10 +186,13 @@ public class FastingRecordServiceImpl implements FastingRecordService {
             return data;
         }
 
-        // 종료된 기록만 통계 계산
+        // 통계는 확인된 종료 기록만 — 종료 시각 확인 필요(NEEDS_CHECK) · 미확인(UNKNOWN)은 뺀다 (M-043)
         List<FastingRecord> completed = records.stream()
-                .filter(r -> r.getEndTime() != null)
+                .filter(FastingEndPolicy::countsInStats)
                 .collect(Collectors.toList());
+        long activeCount = records.stream()
+                .filter(r -> r.getEndTime() == null && r.getEndStatus() == null)
+                .count();
 
         List<FastingRecordDto.FastingRecordResponse> responseList = records.stream()
                 .map(r -> {
@@ -172,6 +204,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
                     res.setTargetHours(r.getTargetHours());
                     res.setActualMinutes(r.getActualMinutes());
                     res.setCompleted(r.getCompleted());
+                    res.setEndStatus(FastingEndPolicy.effectiveStatus(r));
                     return res;
                 })
                 .collect(Collectors.toList());
@@ -191,7 +224,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         }
 
         data.setRecords(responseList);
-        data.setTotalRecords(records.size());
+        data.setTotalRecords((int) (activeCount + completed.size()));
         data.setCompletedRecords((int) completed.stream().filter(r -> Boolean.TRUE.equals(r.getCompleted())).count());
         data.setTotalFastingMinutes(totalMinutes);
         data.setAverageFastingMinutes(completed.isEmpty() ? 0.0 : (double) totalMinutes / completed.size());
@@ -249,7 +282,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         List<FastingRecord> records = fastingRecordRepository
                 .findByUserAndDelYnOrderByStartTimeDesc(user, 'N')
                 .stream()
-                .filter(r -> r.getEndTime() != null)
+                .filter(FastingEndPolicy::countsInStats) // M-043: 확인 필요 · 미확인 기록은 분석에서 뺀다
                 .collect(Collectors.toList());
 
         String systemPrompt = "당신은 간헐적 단식 전문 코치 AI입니다. 사용자의 단식 기록을 분석하고 한국어로 답변해주세요. "

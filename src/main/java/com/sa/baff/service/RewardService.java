@@ -58,8 +58,12 @@ public interface RewardService {
      */
     void claimFirstAttendanceBonus(Long userId, String socialId);
 
-    /** 간헐적 단식 완료 리워드 (목표 달성 시 자동 지급). */
-    RewardDto.rewardResponse grantFastingCompleteReward(String socialId, Long fastingRecordId);
+    /**
+     * 간헐적 단식 완료 리워드 (목표 달성 시 자동 지급) — 실제 지급 그램을 돌려준다.
+     * 비활성 · 같은 기록에 이미 지급 · 오늘 한도 초과면 0. 예외를 던지지 않는다 —
+     * 단식 종료와 같은 트랜잭션이라 예외가 나면 종료 저장까지 취소되기 때문이다 (M-043).
+     */
+    int tryGrantFastingCompleteReward(String socialId, Long fastingRecordId);
 
     /** 간헐적 단식 완료 결과 페이지 광고 보너스. */
     RewardDto.rewardResponse grantFastingAdBonus(String socialId);

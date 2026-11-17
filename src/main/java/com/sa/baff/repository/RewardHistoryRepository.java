@@ -23,4 +23,8 @@ public interface RewardHistoryRepository extends JpaRepository<RewardHistory, Lo
     long countByUserIdAndRewardTypeAndStatusAndDelYnAndRegDateTimeBetween(
             Long userId, RewardType rewardType, RewardStatus status, Character delYn,
             LocalDateTime start, LocalDateTime end);
+
+    // M-043: 단식 완료 보상 기록당 1회 — 같은 단식 기록(referenceId)에 SUCCESS 이력이 있으면 다시 주지 않는다
+    boolean existsByReferenceIdAndRewardTypeAndStatusAndDelYn(
+            Long referenceId, RewardType rewardType, RewardStatus status, Character delYn);
 }
