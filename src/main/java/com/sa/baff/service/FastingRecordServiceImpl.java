@@ -100,13 +100,9 @@ public class FastingRecordServiceImpl implements FastingRecordService {
 
         fastingRecordRepository.save(record);
 
-        // 목표 달성 시 그램 자동 지급 (RewardConfig.FASTING_COMPLETE 비활성 시 0g, 예외 swallow)
+        // 목표 달성 시 그램 자동 지급 — 지급 못 하면 0 (예외 없음 · 같은 트랜잭션이라 예외면 종료까지 취소된다)
         if (completed) {
-            try {
-                rewardService.grantFastingCompleteReward(socialId, record.getId());
-            } catch (Exception e) {
-                log.warn("간헐적 단식 완료 리워드 지급 실패 (fastingId={}): {}", record.getId(), e.getMessage());
-            }
+            rewardService.tryGrantFastingCompleteReward(socialId, record.getId());
         }
 
         return new FastingRecordDto.EndFastingResponse(record.getId(), (int) actualMinutes, completed);

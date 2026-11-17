@@ -155,22 +155,29 @@ public class RewardServiceImpl implements RewardService {
     }
 
     /**
-     * 간헐적 단식 완료 리워드 (목표 달성 시 자동 1회 지급).
-     * - RewardConfig.FASTING_COMPLETE 활성화 + dailyLimit 체크
-     * - FastingRecordServiceImpl.endFasting에서 호출 (예외 swallow는 호출자에서 처리)
+     * 간헐적 단식 완료 리워드 (목표 달성 시 기록당 1회 지급).
+     * - 지급 못 하는 경우(비활성 · 같은 기록 이미 지급 · 오늘 한도 초과)는 0 을 돌려주고 예외를 던지지 않는다.
+     *   FastingRecordServiceImpl.endFasting 과 같은 트랜잭션이라 예외가 나면 종료 저장까지 취소된다 (M-043).
      */
     @Override
-    public RewardDto.rewardResponse grantFastingCompleteReward(String socialId, Long fastingRecordId) {
+    public int tryGrantFastingCompleteReward(String socialId, Long fastingRecordId) {
         UserB user = findUser(socialId);
         Long userId = user.getId();
 
         List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(RewardType.FASTING_COMPLETE);
         if (configs.isEmpty()) {
             log.info("간헐적 단식 완료 리워드 비활성 (userId={})", userId);
-            return RewardDto.rewardResponse.builder().earnedGrams(0).message("").build();
+            return 0;
         }
-
-        checkDailyLimit(userId, RewardType.FASTING_COMPLETE);
+        if (rewardHistoryRepository.existsByReferenceIdAndRewardTypeAndStatusAndDelYn(
+                fastingRecordId, RewardType.FASTING_COMPLETE, RewardStatus.SUCCESS, 'N')) {
+            log.info("간헐적 단식 완료 리워드 이미 지급 (userId={}, fastingId={})", userId, fastingRecordId);
+            return 0;
+        }
+        if (isDailyLimitReached(userId, RewardType.FASTING_COMPLETE)) {
+            log.info("간헐적 단식 완료 리워드 오늘 한도 초과 (userId={}, fastingId={})", userId, fastingRecordId);
+            return 0;
+        }
 
         int earnedGrams = determineAmount(RewardType.FASTING_COMPLETE);
         addPointsToUser(user, earnedGrams, PieceTransactionType.REWARD_FASTING_COMPLETE, fastingRecordId);
@@ -182,10 +189,7 @@ public class RewardServiceImpl implements RewardService {
         incrementDaily(userId, RewardType.FASTING_COMPLETE, earnedGrams);
 
         log.info("간헐적 단식 완료 리워드: userId={}, fastingId={}, earned={}g", userId, fastingRecordId, earnedGrams);
-        return RewardDto.rewardResponse.builder()
-                .earnedGrams(earnedGrams)
-                .message(GramConstants.earnMessage(earnedGrams))
-                .build();
+        return earnedGrams;
     }
 
     /** 간헐적 단식 완료 결과 페이지 광고 보너스 (또받기). */
@@ -503,6 +507,13 @@ public class RewardServiceImpl implements RewardService {
 
     /** 일일 제한 체크 (초과 시 예외) */
     private void checkDailyLimit(Long userId, RewardType rewardType) {
+        if (isDailyLimitReached(userId, rewardType)) {
+            throw new IllegalStateException("오늘은 이미 리워드를 받았어요.");
+        }
+    }
+
+    /** 오늘 지급 횟수가 한도에 닿았는지 (예외 없이 판정 — 단식 완료 보상이 쓴다) */
+    private boolean isDailyLimitReached(Long userId, RewardType rewardType) {
         List<RewardConfig> configs = rewardConfigRepository.findActiveConfigs(rewardType);
 
         Integer dailyLimit = configs.stream()
@@ -515,9 +526,7 @@ public class RewardServiceImpl implements RewardService {
                 .findByUserIdAndRewardDateAndRewardType(userId, LocalDate.now(), rewardType)
                 .orElse(null);
 
-        if (daily != null && daily.getCount() >= dailyLimit) {
-            throw new IllegalStateException("오늘은 이미 리워드를 받았어요.");
-        }
+        return daily != null && daily.getCount() >= dailyLimit;
     }
 
     /** 일일 집계 업데이트 */
