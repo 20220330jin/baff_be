@@ -186,10 +186,13 @@ public class FastingRecordServiceImpl implements FastingRecordService {
             return data;
         }
 
-        // 종료된 기록만 통계 계산
+        // 통계는 확인된 종료 기록만 — 종료 시각 확인 필요(NEEDS_CHECK) · 미확인(UNKNOWN)은 뺀다 (M-043)
         List<FastingRecord> completed = records.stream()
-                .filter(r -> r.getEndTime() != null)
+                .filter(FastingEndPolicy::countsInStats)
                 .collect(Collectors.toList());
+        long activeCount = records.stream()
+                .filter(r -> r.getEndTime() == null && r.getEndStatus() == null)
+                .count();
 
         List<FastingRecordDto.FastingRecordResponse> responseList = records.stream()
                 .map(r -> {
@@ -201,6 +204,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
                     res.setTargetHours(r.getTargetHours());
                     res.setActualMinutes(r.getActualMinutes());
                     res.setCompleted(r.getCompleted());
+                    res.setEndStatus(FastingEndPolicy.effectiveStatus(r));
                     return res;
                 })
                 .collect(Collectors.toList());
@@ -220,7 +224,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         }
 
         data.setRecords(responseList);
-        data.setTotalRecords(records.size());
+        data.setTotalRecords((int) (activeCount + completed.size()));
         data.setCompletedRecords((int) completed.stream().filter(r -> Boolean.TRUE.equals(r.getCompleted())).count());
         data.setTotalFastingMinutes(totalMinutes);
         data.setAverageFastingMinutes(completed.isEmpty() ? 0.0 : (double) totalMinutes / completed.size());
@@ -278,7 +282,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         List<FastingRecord> records = fastingRecordRepository
                 .findByUserAndDelYnOrderByStartTimeDesc(user, 'N')
                 .stream()
-                .filter(r -> r.getEndTime() != null)
+                .filter(FastingEndPolicy::countsInStats) // M-043: 확인 필요 · 미확인 기록은 분석에서 뺀다
                 .collect(Collectors.toList());
 
         String systemPrompt = "당신은 간헐적 단식 전문 코치 AI입니다. 사용자의 단식 기록을 분석하고 한국어로 답변해주세요. "

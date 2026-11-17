@@ -20,6 +20,8 @@ public class FastingRecordDto {
         private Integer targetHours;
         private Integer actualMinutes;
         private Boolean completed;
+        /** 종료 상태 (M-043) — 진행 중 null · 종료 시각이 있고 비어 있던 옛 기록은 CONFIRMED */
+        private FastingEndStatus endStatus;
     }
 
     @Getter
