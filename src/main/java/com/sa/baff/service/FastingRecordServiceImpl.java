@@ -53,8 +53,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         // 이미 진행중인 단식이 있는지 확인
-        Optional<FastingRecord> active = fastingRecordRepository
-                .findByUserAndEndTimeIsNullAndDelYn(user, 'N');
+        Optional<FastingRecord> active = fastingRecordRepository.findActive(user);
         if (active.isPresent()) {
             throw new IllegalStateException("이미 진행중인 단식이 있습니다.");
         }
@@ -113,8 +112,7 @@ public class FastingRecordServiceImpl implements FastingRecordService {
         UserB user = accountLinkedUserResolver.resolveActiveUserBySocialId(socialId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Optional<FastingRecord> active = fastingRecordRepository
-                .findByUserAndEndTimeIsNullAndDelYn(user, 'N');
+        Optional<FastingRecord> active = fastingRecordRepository.findActive(user);
 
         if (active.isEmpty()) {
             return null;
